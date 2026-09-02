@@ -38,8 +38,8 @@
         {
             cmd: "/theme",
             aliases: ["/color", "/palette"],
-            syntax: "/theme <matrix|amber|cyan|magenta>",
-            desc: "Switch CRT terminal color palette",
+            syntax: "/theme <0|matrix|amber|cyan|magenta>",
+            desc: "Switch CRT palette (/theme 0 for pure black & white)",
             badge: "PALETTE",
             run: (args) => handleThemeCommand(args)
         },
@@ -103,11 +103,9 @@
 
     const settingsModal = document.getElementById("settings-modal");
     const settingsCloseBtn = document.getElementById("settings-close-btn");
-    const headerSettingsBtn = document.getElementById("header-settings-btn");
 
     const helpModal = document.getElementById("help-modal");
     const helpCloseBtn = document.getElementById("help-close-btn");
-    const headerHelpBtn = document.getElementById("header-help-btn");
 
     const toast = document.getElementById("toast");
 
@@ -204,14 +202,6 @@
             });
         }
 
-        // Header Buttons
-        if (headerSettingsBtn) {
-            headerSettingsBtn.addEventListener("click", openSettingsModal);
-        }
-        if (headerHelpBtn) {
-            headerHelpBtn.addEventListener("click", openHelpModal);
-        }
-
         // Pagination
         btnPrev.addEventListener("click", () => {
             if (currentPage > 1) {
@@ -256,7 +246,7 @@
                 const theme = btn.getAttribute("data-theme");
                 applyTheme(theme);
                 updateSettingsPillsUI();
-                showToast(`[OK] Theme switched to: ${theme.toUpperCase()}`);
+                showToast(`[OK] Theme switched to: ${theme === "mono" ? "MONOCHROME (B&W)" : theme.toUpperCase()}`);
             });
         });
 
@@ -363,16 +353,23 @@
     }
 
     function handleThemeCommand(args) {
-        const target = (args || "").trim().toLowerCase();
-        const validThemes = ["matrix", "amber", "cyan", "magenta"];
+        let target = (args || "").trim().toLowerCase();
+
+        // Support /theme 0, /theme mono, /theme bw, /theme black
+        if (target === "0" || target === "mono" || target === "bw" || target === "black" || target === "white") {
+            target = "mono";
+        }
+
+        const validThemes = ["mono", "matrix", "amber", "cyan", "magenta"];
 
         if (validThemes.includes(target)) {
             applyTheme(target);
             updateSettingsPillsUI();
-            showToast(`[OK] Theme switched to: ${target.toUpperCase()}`);
+            const label = target === "mono" ? "MONOCHROME (BLACK & WHITE)" : target.toUpperCase();
+            showToast(`[OK] Theme switched to: ${label}`);
             searchInput.value = "";
         } else {
-            showToast(`[!] Usage: /theme <matrix|amber|cyan|magenta>`);
+            showToast(`[!] Usage: /theme <0|matrix|amber|cyan|magenta>`);
         }
     }
 
@@ -404,17 +401,20 @@
 
     // Theme Management
     function applyTheme(themeName) {
-        document.body.classList.remove("theme-amber", "theme-cyan", "theme-magenta", "theme-matrix");
-        if (themeName !== "matrix") {
+        document.body.classList.remove("theme-mono", "theme-0", "theme-amber", "theme-cyan", "theme-magenta", "theme-matrix");
+        if (themeName === "mono" || themeName === "0") {
+            document.body.classList.add("theme-mono");
+        } else if (themeName !== "matrix") {
             document.body.classList.add("theme-" + themeName);
         }
-        settings.theme = themeName;
-        localStorage.setItem("bhilai_theme", themeName);
+        settings.theme = themeName === "0" ? "mono" : themeName;
+        localStorage.setItem("bhilai_theme", settings.theme);
     }
 
     function updateSettingsPillsUI() {
         document.querySelectorAll("#theme-pills .settings-pill-btn").forEach(btn => {
-            btn.classList.toggle("active", btn.getAttribute("data-theme") === settings.theme);
+            const btnTheme = btn.getAttribute("data-theme");
+            btn.classList.toggle("active", btnTheme === settings.theme || (settings.theme === "mono" && btnTheme === "mono"));
         });
         document.querySelectorAll("#server-pills .settings-pill-btn").forEach(btn => {
             btn.classList.toggle("active", btn.getAttribute("data-server") === settings.preferredServer);

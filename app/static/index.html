@@ -17,15 +17,9 @@
                 <span>BHILAI_TV</span>
                 <span class="cursor"></span>
             </div>
-            <div class="header-status" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
-                    <span class="live-dot"></span>
-                    <span>GATEWAY: CONNECTED (15,450+ RELEASES)</span>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button id="header-settings-btn" class="filter-btn" style="padding: 3px 8px; font-size: 0.75rem;" title="Terminal Settings (/settings)">[ CONFIG ⚙ ]</button>
-                    <button id="header-help-btn" class="filter-btn" style="padding: 3px 8px; font-size: 0.75rem;" title="Command Help (/help)">[ HELP ? ]</button>
-                </div>
+            <div class="header-status">
+                <span class="live-dot"></span>
+                <span>GATEWAY: CONNECTED (15,450+ RELEASES)</span>
             </div>
         </header>
 
@@ -120,6 +114,7 @@
                 <div class="settings-section">
                     <div class="settings-title">🎨 CRT COLOR PALETTE (/theme)</div>
                     <div class="settings-pills" id="theme-pills">
+                        <button class="settings-pill-btn" data-theme="mono">[ MONO B&W (0) ]</button>
                         <button class="settings-pill-btn active" data-theme="matrix">[ MATRIX GREEN ]</button>
                         <button class="settings-pill-btn" data-theme="amber">[ AMBER CRT ]</button>
                         <button class="settings-pill-btn" data-theme="cyan">[ CYBER CYAN ]</button>
@@ -174,8 +169,8 @@
                         </tr>
                         <tr>
                             <td class="help-cmd">/theme</td>
-                            <td class="help-syntax">/theme &lt;matrix|amber|cyan|magenta&gt;</td>
-                            <td class="help-desc">Switch terminal color palette instantly</td>
+                            <td class="help-syntax">/theme &lt;0|matrix|amber|cyan|magenta&gt;</td>
+                            <td class="help-desc">Switch terminal palette (use /theme 0 for pure black &amp; white)</td>
                         </tr>
                         <tr>
                             <td class="help-cmd">/latest</td>

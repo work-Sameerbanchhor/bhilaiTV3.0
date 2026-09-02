@@ -537,6 +537,79 @@ body::before {
 }
 
 /* --- THEME PALETTES --- */
+body.theme-mono,
+body.theme-0 {
+    --bg-main: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-surface-hover: #141414;
+    --bg-card: #050505;
+    --border-color: #2e2e2e;
+    --border-glow: rgba(255, 255, 255, 0.15);
+    
+    --text-main: #f5f5f5;
+    --text-muted: #888888;
+    --text-dim: #444444;
+    
+    --neon-green: #ffffff;
+    --neon-cyan: #e0e0e0;
+    --neon-amber: #cccccc;
+    --neon-magenta: #ffffff;
+    --neon-blue: #d4d4d4;
+}
+
+body.theme-mono .ascii-logo,
+body.theme-0 .ascii-logo {
+    text-shadow: none;
+    color: #ffffff;
+}
+
+body.theme-mono .live-dot,
+body.theme-0 .live-dot {
+    background: #ffffff;
+    box-shadow: 0 0 6px #ffffff;
+}
+
+body.theme-mono .tag-year,
+body.theme-mono .tag-quality,
+body.theme-mono .tag-series,
+body.theme-0 .tag-year,
+body.theme-0 .tag-quality,
+body.theme-0 .tag-series {
+    border-color: #555555;
+    color: #cccccc;
+    background: transparent;
+}
+
+body.theme-mono .locker-btn.btn-hubcloud,
+body.theme-mono .locker-btn.btn-gdflix,
+body.theme-mono .locker-btn.btn-telegram,
+body.theme-0 .locker-btn.btn-hubcloud,
+body.theme-0 .locker-btn.btn-gdflix,
+body.theme-0 .locker-btn.btn-telegram {
+    background: #000000;
+    color: #ffffff;
+    border-color: #666666;
+}
+
+body.theme-mono .locker-btn.btn-hubcloud:hover,
+body.theme-mono .locker-btn.btn-gdflix:hover,
+body.theme-mono .locker-btn.btn-telegram:hover,
+body.theme-0 .locker-btn.btn-hubcloud:hover,
+body.theme-0 .locker-btn.btn-gdflix:hover,
+body.theme-0 .locker-btn.btn-telegram:hover {
+    background: #ffffff;
+    color: #000000;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+body.theme-mono .filter-btn.active,
+body.theme-0 .filter-btn.active {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
 body.theme-amber {
     --neon-green: #ffb000;
     --neon-cyan: #ffd000;
