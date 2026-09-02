@@ -11,8 +11,12 @@
     let selectedSuggestionIndex = -1;
 
     // User Preferences (Default: MONOCHROME B&W)
+    const storedTheme = localStorage.getItem("bhilai_theme");
+    const isExplicit = localStorage.getItem("bhilai_theme_explicit");
+    const activeTheme = (storedTheme === "matrix" && !isExplicit) ? "mono" : (storedTheme || "mono");
+
     const settings = {
-        theme: localStorage.getItem("bhilai_theme") || "mono",
+        theme: activeTheme,
         preferredServer: localStorage.getItem("bhilai_server") || "server1",
         perPage: parseInt(localStorage.getItem("bhilai_perpage") || "24", 10)
     };
