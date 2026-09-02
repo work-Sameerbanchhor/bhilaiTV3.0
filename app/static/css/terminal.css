@@ -685,6 +685,9 @@ body.theme-magenta {
     --bg-card: #15040d;
     --text-main: #ffd1e6;
     --text-muted: #9d4e76;
+    --text-dim: #5c2543;
+}
+
 body.theme-matrix {
     --bg-main: #07090e;
     --bg-surface: #0e1219;
@@ -702,6 +705,8 @@ body.theme-matrix {
     --neon-amber: #ffaa00;
     --neon-magenta: #ff2a85;
     --neon-blue: #3b82f6;
+}
+
 body.splash-active {
     overflow: hidden !important;
     touch-action: none;
