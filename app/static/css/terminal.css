@@ -1,20 +1,20 @@
 :root {
-    --bg-main: #07090e;
-    --bg-surface: #0e1219;
-    --bg-surface-hover: #141a24;
-    --bg-card: #0b0e14;
-    --border-color: #1a2332;
-    --border-glow: #00f0ff33;
+    --bg-main: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-surface-hover: #141414;
+    --bg-card: #050505;
+    --border-color: #2e2e2e;
+    --border-glow: rgba(255, 255, 255, 0.15);
     
-    --text-main: #dce5ef;
-    --text-muted: #5e6f88;
-    --text-dim: #3d4a5d;
+    --text-main: #f5f5f5;
+    --text-muted: #888888;
+    --text-dim: #444444;
     
-    --neon-green: #00ff66;
-    --neon-cyan: #00f0ff;
-    --neon-amber: #ffaa00;
-    --neon-magenta: #ff2a85;
-    --neon-blue: #3b82f6;
+    --neon-green: #ffffff;
+    --neon-cyan: #e0e0e0;
+    --neon-amber: #cccccc;
+    --neon-magenta: #ffffff;
+    --neon-blue: #d4d4d4;
 
     --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -685,7 +685,152 @@ body.theme-magenta {
     --bg-card: #15040d;
     --text-main: #ffd1e6;
     --text-muted: #9d4e76;
-    --text-dim: #5c2543;
+body.theme-matrix {
+    --bg-main: #07090e;
+    --bg-surface: #0e1219;
+    --bg-surface-hover: #141a24;
+    --bg-card: #0b0e14;
+    --border-color: #1a2332;
+    --border-glow: #00f0ff33;
+    
+    --text-main: #dce5ef;
+    --text-muted: #5e6f88;
+    --text-dim: #3d4a5d;
+    
+    --neon-green: #00ff66;
+    --neon-cyan: #00f0ff;
+    --neon-amber: #ffaa00;
+    --neon-magenta: #ff2a85;
+    --neon-blue: #3b82f6;
+}
+
+/* --- SPLASH SCREEN (0-100% Smooth 4s Progress Engine) --- */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;
+}
+
+.splash-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-box {
+    width: 100%;
+    max-width: 460px;
+    background: #050505;
+    border: 1px solid #282828;
+    border-radius: 8px;
+    padding: 36px 30px 26px;
+    box-shadow: 0 0 50px rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    text-align: center;
+    animation: splashScaleIn 0.35s ease-out;
+}
+
+@keyframes splashScaleIn {
+    from { transform: scale(0.96); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.splash-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.splash-title {
+    font-size: 2.1rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+}
+
+.splash-subtitle {
+    font-size: 0.85rem;
+    color: #888888;
+    letter-spacing: 1.2px;
+    text-transform: lowercase;
+}
+
+.splash-loader-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.splash-progress-track {
+    width: 100%;
+    height: 6px;
+    background: #141414;
+    border: 1px solid #2b2b2b;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.splash-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.75);
+    border-radius: 2px;
+    transition: width 0.05s linear;
+}
+
+.splash-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #888888;
+    font-family: var(--font-mono);
+}
+
+.splash-meta #splash-percentage {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.splash-footer {
+    border-top: 1px solid #181818;
+    padding-top: 14px;
+    font-size: 0.7rem;
+    color: #555555;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 640px) {
+    .splash-box {
+        padding: 26px 20px 20px;
+        gap: 22px;
+    }
+    .splash-title {
+        font-size: 1.65rem;
+        letter-spacing: 2px;
+    }
+    .splash-subtitle {
+        font-size: 0.78rem;
+    }
 }
 
 /* --- COMMAND SUGGESTIONS POPUP --- */

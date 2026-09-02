@@ -7,9 +7,33 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/terminal.css?v=3.1">
+    <link rel="stylesheet" href="/static/css/terminal.css?v=3.2">
 </head>
 <body>
+    <!-- Terminal Splash Screen (4s Smooth Progress Engine) -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-box">
+            <div class="splash-brand">
+                <div class="splash-title">BHILAI_TV<span class="cursor"></span></div>
+                <div class="splash-subtitle">a part of sameer's network</div>
+            </div>
+            
+            <div class="splash-loader-wrapper">
+                <div class="splash-progress-track">
+                    <div id="splash-progress-bar" class="splash-progress-bar"></div>
+                </div>
+                <div class="splash-meta">
+                    <span id="splash-status-text">&gt; INITIALIZING SYSTEM...</span>
+                    <span id="splash-percentage">0%</span>
+                </div>
+            </div>
+
+            <div class="splash-footer">
+                <span>TERMINAL_OS v3.2 &bull; SECURE ZERO-AD RESOLVER</span>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Terminal Header -->
         <header class="terminal-header">
@@ -202,6 +226,6 @@
     <div id="toast" class="toast">[LINK_COPIED]</div>
 
     <!-- Scripts -->
-    <script src="/static/js/app.js?v=3.1"></script>
+    <script src="/static/js/app.js?v=3.2"></script>
 </body>
 </html>

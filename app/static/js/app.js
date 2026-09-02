@@ -1,4 +1,4 @@
-// BhilaiTV // Terminal UI & Command Engine Controller
+// BhilaiTV // Terminal UI, Splash Screen & Command Engine Controller
 (function() {
     // Application State
     let currentPage = 1;
@@ -10,9 +10,9 @@
     let searchDebounceTimer = null;
     let selectedSuggestionIndex = -1;
 
-    // User Preferences (Persisted in localStorage)
+    // User Preferences (Default: MONOCHROME B&W)
     const settings = {
-        theme: localStorage.getItem("bhilai_theme") || "matrix",
+        theme: localStorage.getItem("bhilai_theme") || "mono",
         preferredServer: localStorage.getItem("bhilai_server") || "server1",
         perPage: parseInt(localStorage.getItem("bhilai_perpage") || "24", 10)
     };
@@ -78,6 +78,11 @@
     ];
 
     // DOM Elements
+    const splashScreen = document.getElementById("splash-screen");
+    const splashProgressBar = document.getElementById("splash-progress-bar");
+    const splashStatusText = document.getElementById("splash-status-text");
+    const splashPercentage = document.getElementById("splash-percentage");
+
     const searchInput = document.getElementById("search-input");
     const cmdSuggestions = document.getElementById("cmd-suggestions");
     const cmdList = document.getElementById("cmd-list");
@@ -113,9 +118,88 @@
     document.addEventListener("DOMContentLoaded", () => {
         applyTheme(settings.theme);
         updateSettingsPillsUI();
+        initSplashScreen();
         loadReleases();
         bindEvents();
     });
+
+    // --- 4-SECOND SMOOTH SPLASH SCREEN PROGRESS ENGINE ---
+    function initSplashScreen() {
+        if (!splashScreen) return;
+
+        const DURATION = 4000; // 4.0 seconds
+        const startTime = performance.now();
+        let isDone = false;
+
+        const statusStages = [
+            { pct: 0, text: "> INITIALIZING TERMINAL KERNEL..." },
+            { pct: 20, text: "> ESTABLISHING GATEWAY LINK..." },
+            { pct: 45, text: "> SYNCING 15,450+ CATALOG RELEASES..." },
+            { pct: 70, text: "> MOUNTING ZERO-AD STREAM RESOLVERS..." },
+            { pct: 90, text: "> OPTIMIZING CRT RENDER ENGINE..." },
+            { pct: 100, text: "> SYSTEM ONLINE // ACCESS GRANTED" }
+        ];
+
+        function updateProgress(now) {
+            if (isDone) return;
+
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / DURATION, 1);
+            const currentPct = Math.floor(progress * 100);
+
+            if (splashProgressBar) {
+                splashProgressBar.style.width = `${progress * 100}%`;
+            }
+            if (splashPercentage) {
+                splashPercentage.textContent = `${currentPct}%`;
+            }
+
+            // Update status text based on current percentage
+            for (let i = statusStages.length - 1; i >= 0; i--) {
+                if (currentPct >= statusStages[i].pct) {
+                    if (splashStatusText) {
+                        splashStatusText.textContent = statusStages[i].text;
+                    }
+                    break;
+                }
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(updateProgress);
+            } else {
+                finishSplash();
+            }
+        }
+
+        function finishSplash() {
+            if (isDone) return;
+            isDone = true;
+
+            if (splashProgressBar) splashProgressBar.style.width = "100%";
+            if (splashPercentage) splashPercentage.textContent = "100%";
+            if (splashStatusText) splashStatusText.textContent = "> SYSTEM ONLINE // ACCESS GRANTED";
+
+            setTimeout(() => {
+                splashScreen.classList.add("fade-out");
+                setTimeout(() => {
+                    if (splashScreen.parentNode) {
+                        splashScreen.parentNode.removeChild(splashScreen);
+                    }
+                }, 550);
+            }, 250);
+        }
+
+        // Tap or press to skip splash instantly
+        splashScreen.addEventListener("click", finishSplash);
+        document.addEventListener("keydown", function skipOnKey(e) {
+            if (!isDone && (e.key === "Enter" || e.key === " " || e.key === "Escape")) {
+                finishSplash();
+                document.removeEventListener("keydown", skipOnKey);
+            }
+        });
+
+        requestAnimationFrame(updateProgress);
+    }
 
     function bindEvents() {
         // Search Input Events
@@ -404,7 +488,9 @@
         document.body.classList.remove("theme-mono", "theme-0", "theme-amber", "theme-cyan", "theme-magenta", "theme-matrix");
         if (themeName === "mono" || themeName === "0") {
             document.body.classList.add("theme-mono");
-        } else if (themeName !== "matrix") {
+        } else if (themeName === "matrix") {
+            document.body.classList.add("theme-matrix");
+        } else {
             document.body.classList.add("theme-" + themeName);
         }
         settings.theme = themeName === "0" ? "mono" : themeName;
