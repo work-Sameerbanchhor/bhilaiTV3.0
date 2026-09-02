@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHILAI_TV // Terminal Live Movies & Series</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/terminal.css?v=3.1">
+</head>
+<body>
+    <div class="container">
+        <!-- Terminal Header -->
+        <header class="terminal-header">
+            <div class="ascii-logo">
+                <span>BHILAI_TV</span>
+                <span class="cursor"></span>
+            </div>
+            <div class="header-status" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    <span class="live-dot"></span>
+                    <span>GATEWAY: CONNECTED (15,450+ RELEASES)</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="header-settings-btn" class="filter-btn" style="padding: 3px 8px; font-size: 0.75rem;" title="Terminal Settings (/settings)">[ CONFIG ⚙ ]</button>
+                    <button id="header-help-btn" class="filter-btn" style="padding: 3px 8px; font-size: 0.75rem;" title="Command Help (/help)">[ HELP ? ]</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Command / Search Bar with Autocomplete Dropdown -->
+        <div class="terminal-prompt-wrapper">
+            <div class="terminal-prompt-box">
+                <span class="prompt-symbol">&gt;&gt;</span>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="prompt-input" 
+                    placeholder="search or type / for commands (/filter 1080p, /settings, /theme, /help)..." 
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+                <span class="prompt-badge">TYPE [ / ]</span>
+            </div>
+
+            <!-- Command Suggestions Dropdown -->
+            <div id="cmd-suggestions" class="cmd-suggestions">
+                <div class="cmd-suggestions-header">
+                    <span>AVAILABLE COMMANDS</span>
+                    <span>[TAB] TO COMPLETE &bull; [ENTER] TO EXECUTE</span>
+                </div>
+                <div id="cmd-list" class="cmd-list">
+                    <!-- Populated via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="ALL">[ ALL_RELEASES ]</button>
+            <button class="filter-btn" data-filter="MOVIES">[ MOVIES ]</button>
+            <button class="filter-btn" data-filter="SERIES">[ WEB_SERIES ]</button>
+        </div>
+
+        <!-- Active Filter Indicator (if filtered via /filter) -->
+        <div id="active-filter-indicator" style="display: none; margin-bottom: 14px; font-size: 0.8rem; color: var(--neon-amber);">
+            <span>&gt; ACTIVE CLI FILTER: </span>
+            <span id="active-filter-label" style="font-weight: 700; color: #fff;"></span>
+            <button id="clear-filter-btn" style="background: transparent; border: 1px solid var(--neon-amber); color: var(--neon-amber); font-family: var(--font-mono); font-size: 0.7rem; padding: 1px 6px; margin-left: 8px; cursor: pointer; border-radius: 3px;">[CLEAR]</button>
+        </div>
+
+        <!-- Section Status Bar -->
+        <div class="grid-header">
+            <span id="grid-status">&gt; LATEST DISCOVERIES</span>
+            <span id="results-count">[FETCHING...]</span>
+        </div>
+
+        <!-- Releases Grid -->
+        <div id="releases-grid" class="releases-grid">
+            <!-- Populated via JavaScript -->
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-bar">
+            <button id="btn-prev" class="page-btn" disabled>&lt;&lt; PREV</button>
+            <span id="page-indicator" class="page-info">PAGE 1 / 1</span>
+            <button id="btn-next" class="page-btn">NEXT &gt;&gt;</button>
+        </div>
+    </div>
+
+    <!-- Release Detail Modal / Drawer -->
+    <div id="detail-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <div id="modal-title" class="modal-title">RELEASE DETAILS</div>
+                    <div id="modal-meta"></div>
+                </div>
+                <button id="modal-close-btn" class="modal-close">[X]</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Populated dynamically with HubCloud & GDFlix buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Terminal Settings Modal (/settings) -->
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" style="color: var(--neon-cyan);">TERMINAL CONFIGURATION // SETTINGS</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Configure local terminal environment and preferred lockers</div>
+                </div>
+                <button id="settings-close-btn" class="modal-close">[X]</button>
+            </div>
+            <div class="modal-body">
+                <!-- Theme Palette -->
+                <div class="settings-section">
+                    <div class="settings-title">🎨 CRT COLOR PALETTE (/theme)</div>
+                    <div class="settings-pills" id="theme-pills">
+                        <button class="settings-pill-btn active" data-theme="matrix">[ MATRIX GREEN ]</button>
+                        <button class="settings-pill-btn" data-theme="amber">[ AMBER CRT ]</button>
+                        <button class="settings-pill-btn" data-theme="cyan">[ CYBER CYAN ]</button>
+                        <button class="settings-pill-btn" data-theme="magenta">[ SYNTHWAVE ]</button>
+                    </div>
+                </div>
+
+                <!-- Default Server Selection -->
+                <div class="settings-section">
+                    <div class="settings-title">⚡ DEFAULT PREFERRED SERVER</div>
+                    <div class="settings-pills" id="server-pills">
+                        <button class="settings-pill-btn active" data-server="server1">[ SERVER 1 (HubCloud R2) ]</button>
+                        <button class="settings-pill-btn" data-server="server2">[ SERVER 2 (FastCloud / ZipDisk) ]</button>
+                    </div>
+                </div>
+
+                <!-- Results Per Page -->
+                <div class="settings-section">
+                    <div class="settings-title">📄 RELEASES PER PAGE</div>
+                    <div class="settings-pills" id="perpage-pills">
+                        <button class="settings-pill-btn active" data-perpage="20">[ 20 ]</button>
+                        <button class="settings-pill-btn" data-perpage="30">[ 30 ]</button>
+                        <button class="settings-pill-btn" data-perpage="50">[ 50 ]</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terminal Help Modal (/help) -->
+    <div id="help-modal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" style="color: var(--neon-green);">TERMINAL COMMAND REFERENCE // CHEAT SHEET</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Execute slash commands directly in the search prompt</div>
+                </div>
+                <button id="help-close-btn" class="modal-close">[X]</button>
+            </div>
+            <div class="modal-body" style="padding: 10px 0;">
+                <table class="help-table">
+                    <tbody>
+                        <tr>
+                            <td class="help-cmd">/settings</td>
+                            <td class="help-syntax">/settings, /config</td>
+                            <td class="help-desc">Open terminal settings and configuration drawer</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/filter</td>
+                            <td class="help-syntax">/filter &lt;1080p|720p|4k|hindi|clear&gt;</td>
+                            <td class="help-desc">Filter active catalog by resolution, audio, or clear filters</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/theme</td>
+                            <td class="help-syntax">/theme &lt;matrix|amber|cyan|magenta&gt;</td>
+                            <td class="help-desc">Switch terminal color palette instantly</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/latest</td>
+                            <td class="help-syntax">/latest</td>
+                            <td class="help-desc">Reset search query and fetch latest releases</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/clear</td>
+                            <td class="help-syntax">/clear, /cls</td>
+                            <td class="help-desc">Clear search input and terminal filters</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/stats</td>
+                            <td class="help-syntax">/stats, /info</td>
+                            <td class="help-desc">Display catalog gateway and resolver telemetry</td>
+                        </tr>
+                        <tr>
+                            <td class="help-cmd">/help</td>
+                            <td class="help-syntax">/help, /?</td>
+                            <td class="help-desc">Show this interactive command reference</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">[LINK_COPIED]</div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js?v=3.1"></script>
+</body>
+</html>
