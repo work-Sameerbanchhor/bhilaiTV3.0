@@ -136,12 +136,12 @@
         let isDone = false;
 
         const statusStages = [
-            { pct: 0, text: "> INITIALIZING TERMINAL KERNEL..." },
-            { pct: 20, text: "> ESTABLISHING GATEWAY LINK..." },
-            { pct: 45, text: "> SYNCING 15,450+ CATALOG RELEASES..." },
-            { pct: 70, text: "> MOUNTING ZERO-AD STREAM RESOLVERS..." },
-            { pct: 90, text: "> OPTIMIZING CRT RENDER ENGINE..." },
-            { pct: 100, text: "> SYSTEM ONLINE // ACCESS GRANTED" }
+            { pct: 0, text: "INITIALIZING SYSTEM..." },
+            { pct: 20, text: "CONNECTING GATEWAY..." },
+            { pct: 45, text: "SYNCING 15,450+ RELEASES..." },
+            { pct: 70, text: "MOUNTING ZERO-AD STREAM RESOLVERS..." },
+            { pct: 90, text: "OPTIMIZING CRT RENDER ENGINE..." },
+            { pct: 100, text: "SYSTEM READY // ACCESS GRANTED" }
         ];
 
         function updateProgress(now) {
