@@ -28,7 +28,7 @@ def parse_title(raw_title: str) -> ParsedTitleInfo:
 
     # 3. Detect Audio info
     audio = None
-    audio_match = re.search(r'\b(Dual Audio [^\-]+|Multi Audio [^\-]+|Hindi Only|Hindi ORG[^\-]+|Hindi|English|Bengali|Tamil|Telugu|Korean|Japanese)\b', title_str, re.IGNORECASE)
+    audio_match = re.search(r'\b(Dual Audio|Multi Audio|Hindi Only|Hindi ORG|Hindi Dubbed|Hindi|English|Bengali|Tamil|Telugu|Korean|Japanese)\b', title_str, re.IGNORECASE)
     if audio_match:
         audio = audio_match.group(1).strip()
 
@@ -49,8 +49,8 @@ def parse_title(raw_title: str) -> ParsedTitleInfo:
     clean = re.sub(r'\[[^\]]*\]', '', title_str)
     clean = re.sub(r'\((19\d\d|20\d\d)\)', '', clean)
     clean = re.sub(r'\b(Season\s*\d+|S\d+)\b', '', clean, flags=re.IGNORECASE)
-    clean = re.sub(r'\b(Dual Audio|Multi Audio|Netflix Original|Amazon Original|Hotstar Special|Apple TV\+|WEB Series|Full Movie|Complete WEB Series|WEB-DL|HDRip|BluRay|480p|720p|1080p|HEVC|HQ|Hindi|English|Bengali|ORG\.?|With Subtitles)\b', '', clean, flags=re.IGNORECASE)
-    clean = re.sub(r'[\+\-\–\—\:]+', ' ', clean)
+    clean = re.sub(r'\b(Dual Audio|Multi Audio|Netflix Original|Amazon Original|Hotstar Special|Apple TV\+|WEB Series|Full Movie|Complete WEB Series|Complete|Dubbed|Filipino Drama|WEB-DL|HDRip|BluRay|480p|720p|1080p|HEVC|HQ|Hindi|English|Bengali|ORG\.?|With Subtitles)\b', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'[\+\-\–\—\:\.\_]+', ' ', clean)
     clean = re.sub(r'\s+', ' ', clean).strip()
 
     if not clean:

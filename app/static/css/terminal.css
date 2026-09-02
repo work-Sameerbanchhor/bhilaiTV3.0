@@ -522,17 +522,53 @@ body::before {
 
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
-    .releases-grid {
-        grid-template-columns: 1fr;
+    .container {
+        padding: 16px 12px;
     }
-    .modal-content {
-        max-height: 92vh;
+    .filter-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 18px;
     }
-    .button-grid {
-        grid-template-columns: 1fr;
+    .filter-btn {
+        padding: 8px 2px;
+        font-size: 0.72rem;
+        text-align: center;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .terminal-prompt-box {
+        padding: 10px 12px;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .prompt-input {
+        font-size: 0.88rem;
     }
     .prompt-badge {
         display: none;
+    }
+    .releases-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .release-card {
+        padding: 14px 14px 10px;
+    }
+    .card-title {
+        font-size: 0.95rem;
+        line-height: 1.35;
+        margin-bottom: 10px;
+    }
+    .modal-content {
+        max-height: 92vh;
+        padding: 16px;
+    }
+    .button-grid {
+        grid-template-columns: 1fr;
     }
 }
 
