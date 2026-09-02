@@ -6,3 +6,5 @@ env/
 venv/
 .DS_Store
 *.log
+app-screenshot/
+docs/app-screenshot/
