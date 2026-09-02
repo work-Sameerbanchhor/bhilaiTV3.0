@@ -707,11 +707,24 @@ body.theme-matrix {
     --neon-blue: #3b82f6;
 }
 
+html.splash-active,
 body.splash-active {
     overflow: hidden !important;
     touch-action: none;
-    height: 100vh;
-    height: 100dvh;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+html.splash-active::-webkit-scrollbar,
+body.splash-active::-webkit-scrollbar,
+.splash-screen::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 /* --- MINIMALIST CINEMA SPLASH SCREEN (Exact image-3.png layout) --- */
@@ -733,6 +746,8 @@ body.splash-active {
     align-items: center !important;
     padding: 24px !important;
     margin: 0 !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
     box-sizing: border-box !important;
     opacity: 1;
     visibility: visible;

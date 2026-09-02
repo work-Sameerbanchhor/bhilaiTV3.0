@@ -178,11 +178,12 @@
         function finishSplash() {
             if (isDone) return;
             isDone = true;
+            document.documentElement.classList.remove("splash-active");
             document.body.classList.remove("splash-active");
 
             if (splashProgressBar) splashProgressBar.style.width = "100%";
             if (splashPercentage) splashPercentage.textContent = "100%";
-            if (splashStatusText) splashStatusText.textContent = "> SYSTEM ONLINE // ACCESS GRANTED";
+            if (splashStatusText) splashStatusText.textContent = "SYSTEM READY // ACCESS GRANTED";
 
             setTimeout(() => {
                 splashScreen.classList.add("fade-out");
