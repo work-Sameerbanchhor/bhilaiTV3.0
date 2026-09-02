@@ -178,6 +178,7 @@
         function finishSplash() {
             if (isDone) return;
             isDone = true;
+            document.body.classList.remove("splash-active");
 
             if (splashProgressBar) splashProgressBar.style.width = "100%";
             if (splashPercentage) splashPercentage.textContent = "100%";
