@@ -2,7 +2,7 @@ import httpx
 import time
 from typing import Optional, Dict, Any
 from app.config import REST_API_URL, BASE_URL, DEFAULT_HEADERS, HTTP_TIMEOUT
-from app.models import ReleaseItem, SearchResponse, ReleaseDetail
+from app.models import ReleaseItem, SearchResponse, ReleaseDetail, SeriesQualitySibling
 from app.services.parser import parse_title, parse_post_html
 
 # In-memory detail cache: {post_id: (timestamp, ReleaseDetail)}
@@ -137,6 +137,64 @@ async def fetch_release_detail(post_id: int) -> ReleaseDetail:
             html=html
         )
         
+        # 3. If series, query sibling resolution posts for the same show and season
+        if detail.release_type == "series" and detail.parsed.clean_title:
+            try:
+                search_term = f"{detail.parsed.clean_title}"
+                if detail.parsed.season:
+                    search_term += f" {detail.parsed.season}"
+                
+                sibling_resp = await client.get(
+                    f"{REST_API_URL}/posts",
+                    params={"search": search_term, "per_page": 12, "_fields": "id,title"}
+                )
+                if sibling_resp.status_code == 200:
+                    sibling_posts = sibling_resp.json()
+                    siblings_map = {}
+                    for sp in sibling_posts:
+                        sp_id = sp.get("id")
+                        sp_title = sp.get("title", {}).get("rendered", "")
+                        sp_info = parse_title(sp_title)
+                        
+                        is_title_match = sp_info.clean_title.lower() == detail.parsed.clean_title.lower()
+                        is_season_match = (sp_info.season == detail.parsed.season) if detail.parsed.season else True
+                        
+                        if is_title_match and is_season_match and sp_info.quality:
+                            siblings_map[sp_id] = SeriesQualitySibling(
+                                post_id=sp_id,
+                                quality=sp_info.quality,
+                                size=sp_info.size,
+                                is_current=(sp_id == post_id)
+                            )
+                    
+                    if post_id not in siblings_map and detail.parsed.quality:
+                        siblings_map[post_id] = SeriesQualitySibling(
+                            post_id=post_id,
+                            quality=detail.parsed.quality,
+                            size=detail.parsed.size,
+                            is_current=True
+                        )
+                    
+                    def quality_sort_key(s: SeriesQualitySibling):
+                        q = s.quality.upper()
+                        if "480" in q: return 1
+                        if "720" in q and "HEVC" not in q: return 2
+                        if "720" in q and "HEVC" in q: return 3
+                        if "1080" in q and "HQ" not in q: return 4
+                        if "1080" in q and "HQ" in q: return 5
+                        if "2160" in q or "4K" in q: return 6
+                        return 99
+                    
+                    # If specific resolutions exist, remove generic non-sized siblings
+                    has_specific_res = any(any(r in s.quality.upper() for r in ["480", "720", "1080", "2160", "4K"]) for s in siblings_map.values())
+                    filtered_siblings = [
+                        s for s in siblings_map.values()
+                        if not (has_specific_res and s.quality.upper() in ["WEB-DL", "BLURAY", "HDRIP", "HDTV"] and not s.size)
+                    ]
+                    detail.sibling_qualities = sorted(filtered_siblings, key=quality_sort_key)
+            except Exception:
+                pass
+
         _DETAIL_CACHE[post_id] = (now, detail)
         return detail
 

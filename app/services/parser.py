@@ -5,56 +5,78 @@ from app.models import ParsedTitleInfo, LockerLink, ResolutionGroup, EpisodeGrou
 def parse_title(raw_title: str) -> ParsedTitleInfo:
     """
     Extracts clean metadata from standard release title strings.
-    Examples:
-      - 'Ozark Season 3 Dual Audio Hindi ORG. + English Netflix Original WEB Series WEB-DL 480p [220MB/E]'
-      - 'Khamoshi: The Musical (1996) WEB-DL Hindi Full Movie'
-      - 'Ali (2025) WEB-DL Bengali Full Movie'
+    Properly handles long titles for both series and movies without truncating or leaving residual junk.
     """
     title_str = raw_title.strip()
     
-    # 1. Detect Year: (19xx|20xx) or bare 19xx|20xx
-    year = None
-    year_match = re.search(r'\(?(19\d\d|20\d\d)\)?', title_str)
-    if year_match:
-        year = year_match.group(1)
-
-    # 2. Detect Season
+    # 1. Detect Season
     season = None
     season_match = re.search(r'\b(Season\s*\d+|S\d+)\b', title_str, re.IGNORECASE)
     if season_match:
         season = season_match.group(1).title()
 
-    is_series = bool(season) or bool(re.search(r'\b(Series|Episodes?|Complete)\b', title_str, re.IGNORECASE))
-
-    # 3. Detect Audio info
-    audio = None
-    audio_match = re.search(r'\b(Dual Audio|Multi Audio|Hindi Only|Hindi ORG|Hindi Dubbed|Hindi|English|Bengali|Tamil|Telugu|Korean|Japanese)\b', title_str, re.IGNORECASE)
-    if audio_match:
-        audio = audio_match.group(1).strip()
-
-    # 4. Detect Quality
+    # 2. Detect Quality - Prioritize explicit resolution (4K, 2160p, 1080p, 720p, 480p)
     quality = None
-    qual_match = re.search(r'\b(480p|720p\s*HEVC|720p|1080p\s*HQ|1080p|2160p|4K|WEB-DL|HDRip|BluRay|HDTV)\b', title_str, re.IGNORECASE)
+    qual_match = re.search(r'\b(2160p\s*4K|2160p|4K|1080p\s*HQ|1080p|720p\s*HEVC|720p|480p)\b', title_str, re.IGNORECASE)
     if qual_match:
-        quality = qual_match.group(1)
+        quality = qual_match.group(1).upper()
+    else:
+        qual_fallback = re.search(r'\b(WEB-DL|BluRay|HDRip|HDTV)\b', title_str, re.IGNORECASE)
+        if qual_fallback:
+            quality = qual_fallback.group(1).upper()
 
-    # 5. Detect Size bracket [xxxMB] or [x.xGB]
+    # 3. Detect Size - Episode size [xxxMB/E] or total size [xxxMB] / [x.xGB]
     size = None
-    size_match = re.search(r'\[([^\]]+)\]', title_str)
-    if size_match:
-        size = size_match.group(1).strip()
+    ep_size_match = re.search(r'\[([0-9\.]+\s*(?:MB|GB)\/E)\]', title_str, re.IGNORECASE)
+    if ep_size_match:
+        size = ep_size_match.group(1).upper()
+    else:
+        sz_match = re.search(r'\[([0-9\.]+\s*(?:MB|GB))\]', title_str, re.IGNORECASE)
+        if sz_match:
+            size = sz_match.group(1).upper()
 
-    # 6. Clean Title
-    # Strip away brackets, Season, Year, Quality, and descriptors to get pure name
-    clean = re.sub(r'\[[^\]]*\]', '', title_str)
-    clean = re.sub(r'\((19\d\d|20\d\d)\)', '', clean)
-    clean = re.sub(r'\b(Season\s*\d+|S\d+)\b', '', clean, flags=re.IGNORECASE)
-    clean = re.sub(r'\b(Dual Audio|Multi Audio|Netflix Original|Amazon Original|Hotstar Special|Apple TV\+|WEB Series|Full Movie|Complete WEB Series|Complete|Dubbed|Filipino Drama|WEB-DL|HDRip|BluRay|480p|720p|1080p|HEVC|HQ|Hindi|English|Bengali|ORG\.?|With Subtitles)\b', '', clean, flags=re.IGNORECASE)
+    # 4. Detect Year
+    year = None
+    year_match = re.search(r'\((19\d\d|20\d\d)\)', title_str)
+    if year_match:
+        year = year_match.group(1)
+    else:
+        bare_y = re.search(r'\b(19\d\d|20\d\d)\b', title_str)
+        if bare_y:
+            year = bare_y.group(1)
+
+    # 5. Detect Audio
+    audio = None
+    if re.search(r'Multi Audio', title_str, re.IGNORECASE):
+        audio = "Multi Audio"
+    elif re.search(r'Dual Audio', title_str, re.IGNORECASE):
+        audio = "Dual Audio"
+    elif re.search(r'Hindi (?:ORG\.?\s*)?Dubbed', title_str, re.IGNORECASE):
+        audio = "Hindi Dubbed"
+    elif re.search(r'Hindi', title_str, re.IGNORECASE):
+        audio = "Hindi"
+    elif re.search(r'English', title_str, re.IGNORECASE):
+        audio = "English"
+
+    # 6. Is series?
+    is_series = bool(season) or bool(ep_size_match) or bool(re.search(r'\b(Series|Episodes?|Complete)\b', title_str, re.IGNORECASE))
+
+    # 7. Clean Show / Movie Title
+    # The actual show/movie name precedes the first metadata boundary
+    clean = re.split(
+        r'\b(?:Season\s*\d+|S\d+|\((?:19\d\d|20\d\d)\)|Multi Audio|Dual Audio|Hindi|Complete|Amazon Prime|Netflix Original|Hotstar|JioCinema|Zee5|SonyLIV|WEB Series|Full Movie|WEB-DL|BluRay|HDRip|480p|720p|1080p)\b',
+        title_str,
+        flags=re.IGNORECASE
+    )[0]
+
+    # Clean out brackets, dots, colons, hyphens
+    clean = re.sub(r'\[[^\]]*\]', '', clean)
+    clean = re.sub(r'\([^)]*\)', lambda m: m.group(0) if not re.search(r'\d{4}', m.group(0)) else '', clean)
     clean = re.sub(r'[\+\-\–\—\:\.\_]+', ' ', clean)
     clean = re.sub(r'\s+', ' ', clean).strip()
 
     if not clean:
-        clean = raw_title.split('(')[0].split('Season')[0].strip() or raw_title
+        clean = title_str.split('(')[0].split('Season')[0].strip() or title_str
 
     return ParsedTitleInfo(
         clean_title=clean,

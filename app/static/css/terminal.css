@@ -277,6 +277,12 @@ body::before {
     border-color: rgba(0, 255, 102, 0.3);
 }
 
+.tag.tag-size {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+    font-weight: 600;
+}
+
 .card-footer {
     display: flex;
     justify-content: space-between;
@@ -401,6 +407,55 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+/* Series Quality Switcher Bar */
+.quality-switcher-bar {
+    background: #080808;
+    border: 1px solid #222222;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quality-switcher-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #888888;
+    letter-spacing: 1px;
+}
+
+.quality-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.quality-pill {
+    background: #0e0e0e;
+    border: 1px solid #282828;
+    color: #cccccc;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.quality-pill:hover {
+    border-color: #ffffff;
+    color: #ffffff;
+}
+
+.quality-pill.active {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
+    font-weight: 700;
 }
 
 /* Locker Link Sections */

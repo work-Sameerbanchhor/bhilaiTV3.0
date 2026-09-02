@@ -19,6 +19,17 @@ def test_series_title_parsing():
     assert "Season 4" in parsed.season
     assert "Ozark" in parsed.clean_title
 
+def test_reacher_long_series_title_parsing():
+    raw_title = "Reacher Season 3 Multi Audio Hindi ORG. + English + Tamil + Telugu + Malayalam + Kannada Complete Amazon Prime WEB Series WEB-DL 720p [650MB/E]"
+    parsed = parse_title(raw_title)
+    
+    assert parsed.clean_title == "Reacher"
+    assert parsed.season == "Season 3"
+    assert parsed.quality == "720P"
+    assert parsed.size == "650MB/E"
+    assert parsed.audio == "Multi Audio"
+    assert parsed.is_series is True
+
 def test_movie_post_html_parsing():
     html_content = """
     <div class="download-links-div">

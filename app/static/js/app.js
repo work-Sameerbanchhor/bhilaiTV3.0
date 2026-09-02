@@ -616,6 +616,7 @@
             const isSeries = item.parsed.is_series;
             const yearTag = item.parsed.year ? `<span class="tag tag-year">${item.parsed.year}</span>` : "";
             const qualTag = item.parsed.quality ? `<span class="tag tag-quality">${item.parsed.quality}</span>` : "";
+            const sizeTag = item.parsed.size ? `<span class="tag tag-size">${item.parsed.size}</span>` : "";
             const typeTag = isSeries ? `<span class="tag tag-series">${item.parsed.season || 'SERIES'}</span>` : `<span class="tag">MOVIE</span>`;
             const audioTag = item.parsed.audio ? `<span class="tag">${item.parsed.audio}</span>` : "";
 
@@ -627,6 +628,7 @@
                             ${typeTag}
                             ${yearTag}
                             ${qualTag}
+                            ${sizeTag}
                             ${audioTag}
                         </div>
                     </div>
@@ -670,17 +672,50 @@
             const data = await res.json();
 
             modalTitle.textContent = data.parsed.clean_title || data.raw_title;
+            const isSeries = data.release_type === 'series';
+            const yearTag = data.parsed.year ? `<span class="tag tag-year">${data.parsed.year}</span>` : "";
+            const qualTag = data.parsed.quality ? `<span class="tag tag-quality">${data.parsed.quality}</span>` : "";
+            const sizeTag = data.parsed.size ? `<span class="tag tag-size">${data.parsed.size}</span>` : "";
+            const typeTag = `<span class="tag ${isSeries ? 'tag-series' : ''}">${data.release_type.toUpperCase()}</span>`;
+            const seasonTag = data.parsed.season ? `<span class="tag tag-series">${data.parsed.season}</span>` : "";
+            const audioTag = data.parsed.audio ? `<span class="tag">${data.parsed.audio}</span>` : "";
+
             modalMeta.innerHTML = `
                 <div class="card-tags" style="margin-top: 6px;">
-                    <span class="tag ${data.release_type === 'series' ? 'tag-series' : ''}">${data.release_type.toUpperCase()}</span>
-                    ${data.parsed.year ? `<span class="tag tag-year">${data.parsed.year}</span>` : ''}
-                    ${data.parsed.season ? `<span class="tag tag-series">${data.parsed.season}</span>` : ''}
-                    ${data.parsed.audio ? `<span class="tag">${data.parsed.audio}</span>` : ''}
+                    ${typeTag}
+                    ${seasonTag}
+                    ${yearTag}
+                    ${qualTag}
+                    ${sizeTag}
+                    ${audioTag}
                 </div>
             `;
 
-            if (data.release_type === "series" && data.episodes && data.episodes.length > 0) {
-                modalBody.innerHTML = data.episodes.map(ep => {
+            // Build Quality Switcher for Series if sibling qualities exist
+            let qualitySwitcherHtml = "";
+            if (isSeries && data.sibling_qualities && data.sibling_qualities.length > 1) {
+                const pills = data.sibling_qualities.map(s => {
+                    const label = `${s.quality}${s.size ? ` [${s.size}]` : ''}`.trim();
+                    const activeClass = s.is_current ? "active" : "";
+                    return `
+                        <button class="quality-pill ${activeClass}" onclick="window.BhilaiApp.openRelease(${s.post_id})">
+                            ${escapeHtml(label)} ${s.is_current ? '★' : ''}
+                        </button>
+                    `;
+                }).join("");
+
+                qualitySwitcherHtml = `
+                    <div class="quality-switcher-bar">
+                        <div class="quality-switcher-label">AVAILABLE QUALITIES & SIZES:</div>
+                        <div class="quality-pills">
+                            ${pills}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (isSeries && data.episodes && data.episodes.length > 0) {
+                const epHtml = data.episodes.map(ep => {
                     const btnHtml = ep.links.map(l => renderLockerButton(l)).join("");
                     return `
                         <div class="resolution-block">
@@ -694,6 +729,7 @@
                         </div>
                     `;
                 }).join("");
+                modalBody.innerHTML = qualitySwitcherHtml + epHtml;
             } else if (data.resolutions && data.resolutions.length > 0) {
                 modalBody.innerHTML = data.resolutions.map(resGroup => {
                     const btnHtml = resGroup.links.map(l => renderLockerButton(l)).join("");
@@ -710,7 +746,7 @@
                     `;
                 }).join("");
             } else {
-                modalBody.innerHTML = `
+                modalBody.innerHTML = qualitySwitcherHtml + `
                     <div style="color: var(--text-muted); text-align: center; padding: 20px;">
                         No direct locker buttons found in this release.
                     </div>

@@ -35,6 +35,12 @@ class EpisodeGroup(BaseModel):
     title: str
     links: List[LockerLink] = Field(default_factory=list)
 
+class SeriesQualitySibling(BaseModel):
+    post_id: int
+    quality: str
+    size: Optional[str] = None
+    is_current: bool = False
+
 class ReleaseDetail(BaseModel):
     id: int
     raw_title: str
@@ -45,6 +51,7 @@ class ReleaseDetail(BaseModel):
     release_type: str  # "movie" or "series"
     resolutions: List[ResolutionGroup] = Field(default_factory=list)
     episodes: List[EpisodeGroup] = Field(default_factory=list)
+    sibling_qualities: List[SeriesQualitySibling] = Field(default_factory=list)
     upstream_url: Optional[str] = None
 
 class SearchResponse(BaseModel):
