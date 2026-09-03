@@ -3,7 +3,7 @@ import time
 import asyncio
 import re
 from typing import Optional, Dict, Any
-from app.config import REST_API_URL, BASE_URL, DEFAULT_HEADERS, HTTP_TIMEOUT
+from app.config import REST_API_URL, BASE_URL, DEFAULT_HEADERS, HTTP_TIMEOUT, MOVIESHUNT_BASE_URL
 from app.models import ReleaseItem, SearchResponse, ReleaseDetail, SeriesQualitySibling
 from app.services.parser import parse_title, parse_post_html
 
@@ -61,7 +61,7 @@ async def get_movie_poster(clean_title: str) -> Optional[str]:
     
     try:
         client = await get_http_client()
-        search_url = f"https://movieshunt.casa/?s={clean}"
+        search_url = f"{MOVIESHUNT_BASE_URL}/?s={clean}"
         r = await client.get(search_url, timeout=5.0)
         if r.status_code == 200:
             art_match = re.search(r'<article[^>]*>.*?<img[^>]+src=[\"\x27]([^\"]+)[\"\x27]', r.text, re.DOTALL | re.I)

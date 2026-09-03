@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env
+
+# Tests & Development Scripts
+tests/
+scripts/
+docs/app-screenshot/
+
+# OS & Editor Artifacts
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
+
+# Temp Storage
+.tempmediaStorage/
