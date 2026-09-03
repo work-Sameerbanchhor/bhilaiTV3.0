@@ -8,3 +8,4 @@ venv/
 *.log
 app-screenshot/
 docs/app-screenshot/
+publish/
