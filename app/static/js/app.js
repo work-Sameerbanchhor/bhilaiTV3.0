@@ -81,6 +81,17 @@
             run: () => handleStatsCommand()
         },
         {
+            cmd: "/github",
+            aliases: ["/repo", "/source", "/code"],
+            syntax: "/github",
+            desc: "Open official GitHub repository & source code",
+            badge: "GIT",
+            run: () => {
+                window.open("https://github.com/work-Sameerbanchhor/bhilaiTV3.0", "_blank");
+                showToast("[OK] Opening GitHub repository...");
+            }
+        },
+        {
             cmd: "/help",
             aliases: ["/?", "/man"],
             syntax: "/help",
