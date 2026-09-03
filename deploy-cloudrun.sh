@@ -2,40 +2,28 @@
 set -e
 
 # ==============================================================================
-# BHILAI_TV // Google Cloud Run Deployment Script
+# BHILAI_TV // Ultra-Fast Cloud Run Redeployment Script
+# Live URL: https://bhilaitv-23241707890.us-central1.run.app
 # ==============================================================================
 
 SERVICE_NAME="bhilaitv"
 REGION="${GCLOUD_REGION:-us-central1}"
 
-echo "=========================================================="
-echo "  BHILAI_TV // GOOGLE CLOUD RUN DEPLOYMENT"
-echo "=========================================================="
-
-# Check if gcloud is installed
-if ! command -v gcloud &> /dev/null; then
-    echo "[!] Error: Google Cloud SDK (gcloud) is not found in PATH."
-    echo "    Please install it: https://cloud.google.com/sdk/docs/install"
-    exit 1
+# Optional 1-time setup flag: ./deploy-cloudrun.sh --setup
+if [ "$1" == "--setup" ]; then
+    echo ">> [1-TIME SETUP] Enabling Google Cloud APIs..."
+    gcloud services enable run.googleapis.com cloudbuild.googleapis.com
 fi
 
-# Get current project
-PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
-if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
-    echo "[!] No active Google Cloud project selected."
-    echo "    Run: gcloud config set project YOUR_PROJECT_ID"
-    exit 1
-fi
-
-echo ">> Active Project : $PROJECT_ID"
+echo "=========================================================="
+echo "  BHILAI_TV // FAST CLOUD RUN REDEPLOY"
+echo "=========================================================="
 echo ">> Target Service : $SERVICE_NAME"
 echo ">> Region         : $REGION"
+echo ">> Building & streaming new revision to Cloud Run..."
 echo ""
 
-echo ">> Enabling Cloud Run and Cloud Build APIs..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com --project "$PROJECT_ID"
-
-echo ">> Building container and deploying to Cloud Run..."
+# Direct 1-step build and redeploy with zero prompts or redundant API calls
 gcloud run deploy "$SERVICE_NAME" \
     --source . \
     --region "$REGION" \
@@ -48,10 +36,10 @@ gcloud run deploy "$SERVICE_NAME" \
     --max-instances 10 \
     --concurrency 80 \
     --set-env-vars "ABHI_BASE_URL=https://abhilinks.site,MOVIESHUNT_BASE_URL=https://movieshunt.casa,HTTP_TIMEOUT=12.0" \
-    --project "$PROJECT_ID"
+    --quiet
 
 echo ""
 echo "=========================================================="
-echo "  [SUCCESS] BHILAI_TV DEPLOYED TO GOOGLE CLOUD RUN!"
+echo "  [OK] LIVE CLOUD RUN URL:"
+echo "  https://bhilaitv-23241707890.us-central1.run.app"
 echo "=========================================================="
-gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format 'value(status.url)' --project "$PROJECT_ID"

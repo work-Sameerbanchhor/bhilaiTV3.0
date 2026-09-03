@@ -1,10 +1,37 @@
 # Google Cloud Run Deployment Guide // BhilaiTV
 
-This guide explains how to deploy **BhilaiTV** to **Google Cloud Run** with serverless auto-scaling, scale-to-zero cost savings, and high availability.
+- **Live Production URL**: `https://bhilaitv-23241707890.us-central1.run.app`
+- **Anycast Default URL**: `https://bhilaitv-7ksu2o5y6q-uc.a.run.app`
 
 ---
 
-## 1. Why Google Cloud Run for BhilaiTV?
+## 1. Fast 1-Command Redeployment (Zero Extra Steps)
+
+Whenever you make code updates, simply run:
+
+```bash
+make deploy
+```
+*or*
+```bash
+./deploy-cloudrun.sh
+```
+
+This performs a direct, non-interactive build on Google Cloud Build and shifts 100% traffic to the new revision without asking questions or running redundant API verification steps.
+
+### Useful Makefile Commands
+
+```bash
+make deploy   # Streamlined 1-step Cloud Run redeployment
+make logs     # Tail live production container logs
+make status   # Check current revision, traffic & readiness
+make test     # Run the automated test suite locally
+make dev      # Run local development server on :8000
+```
+
+---
+
+## 2. Why Google Cloud Run for BhilaiTV?
 
 - **Scale to Zero**: When nobody is browsing, instances scale down to 0, meaning **$0 idle cost**.
 - **Generous Free Tier**: Google Cloud Run includes **2 Million free requests per month** and 360,000 GB-seconds of memory free.
