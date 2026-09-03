@@ -17,6 +17,7 @@ class ReleaseItem(BaseModel):
     date: str
     slug: str
     url: str
+    poster_url: Optional[str] = None
 
 class LockerLink(BaseModel):
     provider: str
@@ -52,6 +53,7 @@ class ReleaseDetail(BaseModel):
     resolutions: List[ResolutionGroup] = Field(default_factory=list)
     episodes: List[EpisodeGroup] = Field(default_factory=list)
     sibling_qualities: List[SeriesQualitySibling] = Field(default_factory=list)
+    poster_url: Optional[str] = None
     upstream_url: Optional[str] = None
 
 class SearchResponse(BaseModel):

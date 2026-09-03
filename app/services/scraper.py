@@ -1,5 +1,7 @@
 import httpx
 import time
+import asyncio
+import re
 from typing import Optional, Dict, Any
 from app.config import REST_API_URL, BASE_URL, DEFAULT_HEADERS, HTTP_TIMEOUT
 from app.models import ReleaseItem, SearchResponse, ReleaseDetail, SeriesQualitySibling
@@ -8,6 +10,44 @@ from app.services.parser import parse_title, parse_post_html
 # In-memory detail cache: {post_id: (timestamp, ReleaseDetail)}
 _DETAIL_CACHE: Dict[int, tuple[float, ReleaseDetail]] = {}
 CACHE_TTL = 600  # 10 minutes
+
+# In-memory poster cache: {clean_title: poster_url}
+_POSTER_CACHE: Dict[str, Optional[str]] = {}
+
+async def get_movie_poster(clean_title: str) -> Optional[str]:
+    """
+    Asynchronously retrieves the official TMDB movie/series poster from MoviesHunt.
+    Caches results in memory for instantaneous sub-millisecond retrieval.
+    """
+    if not clean_title:
+        return None
+    
+    clean = clean_title.strip()
+    if clean in _POSTER_CACHE:
+        return _POSTER_CACHE[clean]
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+    
+    try:
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=5.0) as client:
+            search_url = f"https://movieshunt.casa/?s={clean}"
+            r = await client.get(search_url)
+            if r.status_code == 200:
+                art_match = re.search(r'<article[^>]*>.*?<img[^>]+src=[\"\x27]([^\"]+)[\"\x27]', r.text, re.DOTALL | re.I)
+                if art_match:
+                    url = art_match.group(1).strip()
+                    # Optimize TMDB image size: replace /original/ with /w342/ for compact fast loading
+                    if "image.tmdb.org/t/p/" in url:
+                        url = re.sub(r'/t/p/(?:original|w\d+)/', '/t/p/w342/', url)
+                    _POSTER_CACHE[clean] = url
+                    return url
+    except Exception:
+        pass
+        
+    _POSTER_CACHE[clean] = None
+    return None
 
 async def get_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
@@ -46,6 +86,13 @@ async def fetch_latest_releases(page: int = 1, per_page: int = 20) -> SearchResp
                 slug=post.get("slug", ""),
                 url=post.get("link", f"{BASE_URL}/archives/{post['id']}/")
             ))
+
+        # Concurrently attach movie/series posters
+        clean_titles = [it.parsed.clean_title for it in items]
+        posters = await asyncio.gather(*[get_movie_poster(t) for t in clean_titles], return_exceptions=True)
+        for it, p in zip(items, posters):
+            if isinstance(p, str):
+                it.poster_url = p
             
         return SearchResponse(
             results=items,
@@ -86,6 +133,13 @@ async def search_releases(query: str, page: int = 1, per_page: int = 20) -> Sear
                 slug=post.get("slug", ""),
                 url=post.get("link", f"{BASE_URL}/archives/{post['id']}/")
             ))
+
+        # Concurrently attach movie/series posters
+        clean_titles = [it.parsed.clean_title for it in items]
+        posters = await asyncio.gather(*[get_movie_poster(t) for t in clean_titles], return_exceptions=True)
+        for it, p in zip(items, posters):
+            if isinstance(p, str):
+                it.poster_url = p
             
         return SearchResponse(
             results=items,
@@ -192,6 +246,13 @@ async def fetch_release_detail(post_id: int) -> ReleaseDetail:
                         if not (has_specific_res and s.quality.upper() in ["WEB-DL", "BLURAY", "HDRIP", "HDTV"] and not s.size)
                     ]
                     detail.sibling_qualities = sorted(filtered_siblings, key=quality_sort_key)
+            except Exception:
+                pass
+
+        # 4. Fetch movie/series poster
+        if detail.parsed.clean_title:
+            try:
+                detail.poster_url = await get_movie_poster(detail.parsed.clean_title)
             except Exception:
                 pass
 

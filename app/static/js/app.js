@@ -18,7 +18,8 @@
     const settings = {
         theme: activeTheme,
         preferredServer: localStorage.getItem("bhilai_server") || "server1",
-        perPage: parseInt(localStorage.getItem("bhilai_perpage") || "24", 10)
+        perPage: parseInt(localStorage.getItem("bhilai_perpage") || "24", 10),
+        showPosters: localStorage.getItem("bhilai_posters") !== "false"
     };
 
     // Terminal Commands Registry
@@ -30,6 +31,14 @@
             desc: "Open terminal settings & server preferences",
             badge: "CONFIG",
             run: () => openSettingsModal()
+        },
+        {
+            cmd: "/posters",
+            aliases: ["/poster", "/img"],
+            syntax: "/posters <on|off>",
+            desc: "Toggle movie & series card poster display mode",
+            badge: "DISPLAY",
+            run: (args) => handlePostersCommand(args)
         },
         {
             cmd: "/filter",
@@ -359,6 +368,13 @@
                 loadReleases();
             });
         });
+
+        document.querySelectorAll("#poster-pills .settings-pill-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const opt = btn.getAttribute("data-posters");
+                setPostersMode(opt === "on");
+            });
+        });
     }
 
     // --- COMMAND ENGINE & PARSER ---
@@ -514,6 +530,33 @@
         document.querySelectorAll("#perpage-pills .settings-pill-btn").forEach(btn => {
             btn.classList.toggle("active", parseInt(btn.getAttribute("data-perpage"), 10) === settings.perPage);
         });
+        document.querySelectorAll("#poster-pills .settings-pill-btn").forEach(btn => {
+            const opt = btn.getAttribute("data-posters");
+            btn.classList.toggle("active", (settings.showPosters && opt === "on") || (!settings.showPosters && opt === "off"));
+        });
+    }
+
+    function handlePostersCommand(args) {
+        if (!args || args.length === 0) {
+            setPostersMode(!settings.showPosters);
+            return;
+        }
+        const val = args[0].toLowerCase();
+        if (val === "on" || val === "1" || val === "true" || val === "yes") {
+            setPostersMode(true);
+        } else if (val === "off" || val === "0" || val === "false" || val === "no") {
+            setPostersMode(false);
+        } else {
+            showToast(`[?] Usage: /posters <on|off>`);
+        }
+    }
+
+    function setPostersMode(enabled) {
+        settings.showPosters = enabled;
+        localStorage.setItem("bhilai_posters", enabled ? "true" : "false");
+        updateSettingsPillsUI();
+        renderGrid();
+        showToast(`[OK] Movie Posters: ${enabled ? "ENABLED" : "DISABLED (TEXT ONLY)"}`);
     }
 
     function openSettingsModal() {
@@ -612,6 +655,9 @@
             return;
         }
 
+        // Apply grid class for poster layout
+        releasesGrid.classList.toggle("has-posters", settings.showPosters);
+
         releasesGrid.innerHTML = filtered.map(item => {
             const isSeries = item.parsed.is_series;
             const yearTag = item.parsed.year ? `<span class="tag tag-year">${item.parsed.year}</span>` : "";
@@ -619,6 +665,36 @@
             const sizeTag = item.parsed.size ? `<span class="tag tag-size">${item.parsed.size}</span>` : "";
             const typeTag = isSeries ? `<span class="tag tag-series">${item.parsed.season || 'SERIES'}</span>` : `<span class="tag">MOVIE</span>`;
             const audioTag = item.parsed.audio ? `<span class="tag">${item.parsed.audio}</span>` : "";
+
+            if (settings.showPosters) {
+                const posterHtml = item.poster_url 
+                    ? `<img class="card-poster-img" src="${escapeHtml(item.poster_url)}" alt="${escapeHtml(item.parsed.clean_title)}" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>[NO ARTWORK]</div>';" />`
+                    : `<div class="card-poster-placeholder">&gt; BHILAI_TV<br><span style="font-size: 0.62rem; color: var(--text-muted); margin-top: 4px;">NO ARTWORK</span></div>`;
+
+                return `
+                    <div class="release-card has-poster ${isSeries ? 'is-series' : ''}" onclick="window.BhilaiApp.openRelease(${item.id})">
+                        <div class="card-poster-wrapper">
+                            ${posterHtml}
+                            <span class="card-poster-badge">${isSeries ? (item.parsed.season || 'SERIES') : 'MOVIE'}</span>
+                        </div>
+                        <div class="card-body-content">
+                            <div>
+                                <div class="card-title">${escapeHtml(item.parsed.clean_title || item.raw_title)}</div>
+                                <div class="card-tags">
+                                    ${yearTag}
+                                    ${qualTag}
+                                    ${sizeTag}
+                                    ${audioTag}
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <span>#${item.id}</span>
+                                <span class="card-action">[LOCKERS &gt;&gt;]</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
             return `
                 <div class="release-card ${isSeries ? 'is-series' : ''}" onclick="window.BhilaiApp.openRelease(${item.id})">
@@ -680,14 +756,27 @@
             const seasonTag = data.parsed.season ? `<span class="tag tag-series">${data.parsed.season}</span>` : "";
             const audioTag = data.parsed.audio ? `<span class="tag">${data.parsed.audio}</span>` : "";
 
+            const posterColHtml = data.poster_url 
+                ? `<div class="modal-poster-col"><img class="modal-poster-img" src="${escapeHtml(data.poster_url)}" alt="${escapeHtml(data.parsed.clean_title)}" /></div>`
+                : '';
+
             modalMeta.innerHTML = `
-                <div class="card-tags" style="margin-top: 6px;">
-                    ${typeTag}
-                    ${seasonTag}
-                    ${yearTag}
-                    ${qualTag}
-                    ${sizeTag}
-                    ${audioTag}
+                <div class="modal-hero-layout">
+                    ${posterColHtml}
+                    <div class="modal-info-col">
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">${escapeHtml(data.parsed.clean_title || data.raw_title)}</div>
+                        <div class="card-tags" style="margin-top: 6px;">
+                            ${typeTag}
+                            ${seasonTag}
+                            ${yearTag}
+                            ${qualTag}
+                            ${sizeTag}
+                            ${audioTag}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px;">
+                            CATALOG_ID: #${data.id} &bull; GATEWAY: ZERO-AD VERIFIED
+                        </div>
+                    </div>
                 </div>
             `;
 

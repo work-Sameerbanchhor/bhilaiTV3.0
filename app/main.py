@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 
 from app.models import SearchResponse, ReleaseDetail
-from app.services.scraper import fetch_latest_releases, search_releases, fetch_release_detail, resolve_hubcloud_direct_links
+from app.services.scraper import fetch_latest_releases, search_releases, fetch_release_detail, resolve_hubcloud_direct_links, get_movie_poster
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("bhilaitv")
@@ -62,6 +62,15 @@ async def get_release(post_id: int):
     except Exception as e:
         logger.error(f"Error fetching release detail for ID {post_id}: {e}")
         raise HTTPException(status_code=404, detail=f"Release not found or unable to parse: {str(e)}")
+
+@app.get("/api/poster")
+async def get_poster(title: str = Query(..., min_length=1)):
+    try:
+        poster_url = await get_movie_poster(title)
+        return {"title": title, "poster_url": poster_url}
+    except Exception as e:
+        logger.error(f"Error retrieving poster for '{title}': {e}")
+        return {"title": title, "poster_url": None}
 
 @app.get("/api/resolve/direct")
 async def resolve_direct_link(url: str = Query(..., min_length=5)):

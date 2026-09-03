@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/terminal.css?v=3.6">
+    <link rel="stylesheet" href="/static/css/terminal.css?v=3.7">
 </head>
 <body class="theme-mono splash-active">
     <!-- Minimalist Cinema Splash Screen (image-3.png layout) -->
@@ -149,6 +149,15 @@
                     </div>
                 </div>
 
+                <!-- Poster Mode Selection -->
+                <div class="settings-section">
+                    <div class="settings-title">🖼️ CARD POSTER DISPLAY (/posters)</div>
+                    <div class="settings-pills" id="poster-pills">
+                        <button class="settings-pill-btn active" data-posters="on">[ POSTERS ON ]</button>
+                        <button class="settings-pill-btn" data-posters="off">[ TEXT ONLY (OFF) ]</button>
+                    </div>
+                </div>
+
                 <!-- Results Per Page -->
                 <div class="settings-section">
                     <div class="settings-title">📄 RELEASES PER PAGE</div>
@@ -191,6 +200,11 @@
                             <td class="help-desc">Switch terminal palette (use /theme 0 for pure black &amp; white)</td>
                         </tr>
                         <tr>
+                            <td class="help-cmd">/posters</td>
+                            <td class="help-syntax">/posters &lt;on|off&gt;, /poster</td>
+                            <td class="help-desc">Toggle movie and series poster display mode</td>
+                        </tr>
+                        <tr>
                             <td class="help-cmd">/latest</td>
                             <td class="help-syntax">/latest</td>
                             <td class="help-desc">Reset search query and fetch latest releases</td>
@@ -220,6 +234,6 @@
     <div id="toast" class="toast">[LINK_COPIED]</div>
 
     <!-- Scripts -->
-    <script src="/static/js/app.js?v=3.6"></script>
+    <script src="/static/js/app.js?v=3.7"></script>
 </body>
 </html>
