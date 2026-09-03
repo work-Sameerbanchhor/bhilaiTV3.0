@@ -176,8 +176,8 @@ Server-side resolver for GDFlix links using Chrome TLS impersonation to bypass T
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/bhilaiTV-harness.git
-cd bhilaiTV-harness
+git clone https://github.com/work-Sameerbanchhor/bhilaiTV3.0.git
+cd bhilaiTV3.0
 
 # 2. Create and activate a virtual environment
 python3 -m venv venv
