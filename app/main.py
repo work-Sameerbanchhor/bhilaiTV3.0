@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Path as FastPath
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -8,15 +9,25 @@ import logging
 from app.models import SearchResponse, ReleaseDetail
 from app.services.scraper import fetch_latest_releases, search_releases, fetch_release_detail, resolve_hubcloud_direct_links, get_movie_poster
 
+from contextlib import asynccontextmanager
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("bhilaitv")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    from app.services.scraper import close_http_client
+    await close_http_client()
 
 app = FastAPI(
     title="BhilaiTV // Terminal Movie Explorer",
     description="High-speed Terminal-themed Live Movie & Series Explorer powered by FastAPI",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -56,7 +67,7 @@ async def search(q: str = Query(..., min_length=1), page: int = Query(1, ge=1), 
         raise HTTPException(status_code=502, detail=f"Upstream provider error: {str(e)}")
 
 @app.get("/api/release/{post_id}", response_model=ReleaseDetail)
-async def get_release(post_id: int):
+async def get_release(post_id: int = FastPath(..., ge=1, description="Post ID must be greater than 0")):
     try:
         return await fetch_release_detail(post_id=post_id)
     except Exception as e:
