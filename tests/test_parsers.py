@@ -100,3 +100,33 @@ def test_series_post_html_parsing():
     # Check normalized GDFlix URL on episode 1
     gd_link = [l for l in detail.episodes[0].links if l.provider == "GDFlix"][0]
     assert gd_link.url == "https://new3.gdflix.io/file/8fgJTUqlTWKJ874"
+
+def test_series_zip_pack_html_parsing():
+    html_content = """
+    <div class="download-links-div">
+        <h4>720p [4.6GB]</h4>
+        <div class="downloads-btns-div">
+            <a href="https://hubcloud.cx/drive/zip720p" class="btn"> HUBCLOUD [DD] </a>
+        </div>
+        <h4>1080p [8.1GB]</h4>
+        <div class="downloads-btns-div">
+            <a href="https://hubcloud.cx/drive/zip1080p" class="btn"> HUBCLOUD [DD] </a>
+        </div>
+    </div>
+    """
+    detail = parse_post_html(
+        post_id=303,
+        raw_title="The Purge Season 2 Dual Audio Hindi ORG. Complete Amazon Prime WEB Series BluRay",
+        date="2024-01-01",
+        slug="the-purge-s02",
+        post_url="https://abhilinks.site/archives/303",
+        html=html_content
+    )
+    
+    assert detail.release_type == "series"
+    assert detail.parsed.is_series is True
+    assert detail.parsed.season == "Season 2"
+    assert len(detail.resolutions) == 2
+    assert "720p" in detail.resolutions[0].quality
+    assert detail.resolutions[0].size == "4.6GB"
+

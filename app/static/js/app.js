@@ -669,28 +669,125 @@
         // Apply grid class for poster layout
         releasesGrid.classList.toggle("has-posters", settings.showPosters);
 
-        releasesGrid.innerHTML = filtered.map(item => {
-            const isSeries = item.parsed.is_series;
+        const getQualityRank = (q) => {
+            const upper = (q || "").toUpperCase();
+            if (upper.includes("2160") || upper.includes("4K")) return 5;
+            if (upper.includes("1080") && upper.includes("HQ")) return 4;
+            if (upper.includes("1080")) return 3;
+            if (upper.includes("720") && upper.includes("HEVC")) return 2;
+            if (upper.includes("720")) return 2;
+            if (upper.includes("480")) return 1;
+            return 0;
+        };
+
+        // Smart Grouping for Series Sibling Releases:
+        // Consolidates separate posts of the same series & season (720p, 1080p, zip pack) into a unified card
+        const displayGroups = [];
+        const seriesMap = new Map();
+
+        for (const item of filtered) {
+            if (!item.parsed.is_series) {
+                displayGroups.push({
+                    isSeries: false,
+                    primaryItem: item,
+                    items: [item],
+                    cleanTitle: item.parsed.clean_title || item.raw_title,
+                    season: null,
+                    qualities: item.parsed.quality ? [item.parsed.quality] : [],
+                    sizes: item.parsed.size ? [item.parsed.size] : [],
+                    audio: item.parsed.audio || ""
+                });
+            } else {
+                const cleanKey = (item.parsed.clean_title || item.raw_title || "").trim().toLowerCase();
+                const seasonKey = (item.parsed.season || "").trim().toLowerCase();
+                const groupKey = `${cleanKey}__${seasonKey}`;
+
+                if (!seriesMap.has(groupKey)) {
+                    const group = {
+                        isSeries: true,
+                        primaryItem: item,
+                        items: [item],
+                        cleanTitle: item.parsed.clean_title || item.raw_title,
+                        season: item.parsed.season || "SERIES",
+                        qualities: item.parsed.quality ? [item.parsed.quality] : [],
+                        sizes: item.parsed.size ? [item.parsed.size] : [],
+                        audio: item.parsed.audio || ""
+                    };
+                    seriesMap.set(groupKey, group);
+                    displayGroups.push(group);
+                } else {
+                    const group = seriesMap.get(groupKey);
+                    group.items.push(item);
+
+                    if (item.parsed.quality && !group.qualities.includes(item.parsed.quality)) {
+                        group.qualities.push(item.parsed.quality);
+                    }
+                    if (item.parsed.size && !group.sizes.includes(item.parsed.size)) {
+                        group.sizes.push(item.parsed.size);
+                    }
+                    if (!group.audio && item.parsed.audio) {
+                        group.audio = item.parsed.audio;
+                    }
+
+                    // Select highest quality item (or one with poster) as primary click target
+                    const currRank = getQualityRank(group.primaryItem.parsed.quality);
+                    const newRank = getQualityRank(item.parsed.quality);
+                    if (newRank > currRank || (!group.primaryItem.poster_url && item.poster_url)) {
+                        group.primaryItem = item;
+                    }
+                }
+            }
+        }
+
+        releasesGrid.innerHTML = displayGroups.map(group => {
+            const item = group.primaryItem;
+            const isSeries = group.isSeries;
             const yearTag = item.parsed.year ? `<span class="tag tag-year">${item.parsed.year}</span>` : "";
-            const qualTag = item.parsed.quality ? `<span class="tag tag-quality">${item.parsed.quality}</span>` : "";
-            const sizeTag = item.parsed.size ? `<span class="tag tag-size">${item.parsed.size}</span>` : "";
-            const typeTag = isSeries ? `<span class="tag tag-series">${item.parsed.season || 'SERIES'}</span>` : `<span class="tag">MOVIE</span>`;
-            const audioTag = item.parsed.audio ? `<span class="tag">${item.parsed.audio}</span>` : "";
+
+            // Quality tag: sort available qualities e.g. "720P • 1080P"
+            let qualTag = "";
+            if (group.qualities && group.qualities.length > 0) {
+                const sortedQuals = [...group.qualities].sort((a, b) => getQualityRank(a) - getQualityRank(b));
+                qualTag = `<span class="tag tag-quality">${escapeHtml(sortedQuals.join(" • "))}</span>`;
+            } else if (item.parsed.quality) {
+                qualTag = `<span class="tag tag-quality">${escapeHtml(item.parsed.quality)}</span>`;
+            }
+
+            // Size tag
+            let sizeTag = "";
+            if (group.sizes && group.sizes.length > 1) {
+                sizeTag = `<span class="tag tag-size">${escapeHtml(group.sizes[0])} - ${escapeHtml(group.sizes[group.sizes.length - 1])}</span>`;
+            } else if (group.sizes && group.sizes.length === 1) {
+                sizeTag = `<span class="tag tag-size">${escapeHtml(group.sizes[0])}</span>`;
+            } else if (item.parsed.size) {
+                sizeTag = `<span class="tag tag-size">${escapeHtml(item.parsed.size)}</span>`;
+            }
+
+            const typeTag = isSeries ? `<span class="tag tag-series">${escapeHtml(group.season || 'SERIES')}</span>` : `<span class="tag">MOVIE</span>`;
+            const audioTag = (group.audio || item.parsed.audio) ? `<span class="tag">${escapeHtml(group.audio || item.parsed.audio)}</span>` : "";
+
+            // Form clean contextual title e.g. "The Purge — Season 2"
+            const cardDisplayTitle = isSeries && group.season && group.season !== 'SERIES'
+                ? `${group.cleanTitle} — ${group.season}`
+                : (item.parsed.clean_title || item.raw_title);
+
+            const posterImgUrl = item.poster_url || (group.items.find(it => it.poster_url)?.poster_url);
+            const actionLabel = group.items.length > 1 ? `[${group.items.length} QUALITIES &gt;&gt;]` : `[LOCKERS &gt;&gt;]`;
 
             if (settings.showPosters) {
-                const posterHtml = item.poster_url 
-                    ? `<img class="card-poster-img" src="${escapeHtml(item.poster_url)}" alt="${escapeHtml(item.parsed.clean_title)}" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>[NO ARTWORK]</div>';" />`
+                const posterHtml = posterImgUrl 
+                    ? `<img class="card-poster-img" src="${escapeHtml(posterImgUrl)}" alt="${escapeHtml(cardDisplayTitle)}" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>[NO ARTWORK]</div>';" />`
                     : `<div class="card-poster-placeholder">&gt; BHILAI_TV<br><span style="font-size: 0.62rem; color: var(--text-muted); margin-top: 4px;">NO ARTWORK</span></div>`;
 
                 return `
                     <div class="release-card has-poster ${isSeries ? 'is-series' : ''}" onclick="window.BhilaiApp.openRelease(${item.id})">
                         <div class="card-poster-wrapper">
                             ${posterHtml}
-                            <span class="card-poster-badge">${isSeries ? (item.parsed.season || 'SERIES') : 'MOVIE'}</span>
+                            <span class="card-poster-badge">${isSeries ? escapeHtml(group.season || 'SERIES') : 'MOVIE'}</span>
                         </div>
                         <div class="card-body-content">
                             <div>
-                                <div class="card-title">${escapeHtml(item.parsed.clean_title || item.raw_title)}</div>
+                                <div class="card-title">${escapeHtml(cardDisplayTitle)}</div>
                                 <div class="card-tags">
                                     ${yearTag}
                                     ${qualTag}
@@ -700,7 +797,7 @@
                             </div>
                             <div class="card-footer">
                                 <span>#${item.id}</span>
-                                <span class="card-action">[LOCKERS &gt;&gt;]</span>
+                                <span class="card-action">${actionLabel}</span>
                             </div>
                         </div>
                     </div>
@@ -710,7 +807,7 @@
             return `
                 <div class="release-card ${isSeries ? 'is-series' : ''}" onclick="window.BhilaiApp.openRelease(${item.id})">
                     <div>
-                        <div class="card-title">${escapeHtml(item.parsed.clean_title || item.raw_title)}</div>
+                        <div class="card-title">${escapeHtml(cardDisplayTitle)}</div>
                         <div class="card-tags">
                             ${typeTag}
                             ${yearTag}
@@ -721,7 +818,7 @@
                     </div>
                     <div class="card-footer">
                         <span>#${item.id}</span>
-                        <span class="card-action">[LOCKER LINKS &gt;&gt;]</span>
+                        <span class="card-action">${actionLabel}</span>
                     </div>
                 </div>
             `;
@@ -758,8 +855,11 @@
             if (!res.ok) throw new Error("Failed to load release detail");
             const data = await res.json();
 
-            modalTitle.textContent = data.parsed.clean_title || data.raw_title;
             const isSeries = data.release_type === 'series';
+            const modalDisplayTitle = isSeries && data.parsed.season
+                ? `${data.parsed.clean_title} — ${data.parsed.season}`
+                : (data.parsed.clean_title || data.raw_title);
+            modalTitle.textContent = modalDisplayTitle;
             const yearTag = data.parsed.year ? `<span class="tag tag-year">${data.parsed.year}</span>` : "";
             const qualTag = data.parsed.quality ? `<span class="tag tag-quality">${data.parsed.quality}</span>` : "";
             const sizeTag = data.parsed.size ? `<span class="tag tag-size">${data.parsed.size}</span>` : "";
@@ -775,7 +875,7 @@
                 <div class="modal-hero-layout">
                     ${posterColHtml}
                     <div class="modal-info-col">
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">${escapeHtml(data.parsed.clean_title || data.raw_title)}</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">${escapeHtml(modalDisplayTitle)}</div>
                         <div class="card-tags" style="margin-top: 6px;">
                             ${typeTag}
                             ${seasonTag}
@@ -831,7 +931,7 @@
                 }).join("");
                 modalBody.innerHTML = qualitySwitcherHtml + epHtml;
             } else if (data.resolutions && data.resolutions.length > 0) {
-                modalBody.innerHTML = data.resolutions.map(resGroup => {
+                const resHtml = data.resolutions.map(resGroup => {
                     const btnHtml = resGroup.links.map(l => renderLockerButton(l)).join("");
                     return `
                         <div class="resolution-block">
@@ -845,6 +945,7 @@
                         </div>
                     `;
                 }).join("");
+                modalBody.innerHTML = qualitySwitcherHtml + resHtml;
             } else {
                 modalBody.innerHTML = qualitySwitcherHtml + `
                     <div style="color: var(--text-muted); text-align: center; padding: 20px;">

@@ -162,7 +162,7 @@ def parse_post_html(post_id: int, raw_title: str, date: str, slug: str, post_url
                 links=ep_links
             ))
     elif resolution_sections:
-        release_type = "movie"
+        release_type = "series" if parsed_info.is_series else "movie"
         for qual_str, btn_chunk in resolution_sections:
             clean_qual = re.sub(r'<[^>]+>', '', qual_str).strip()
             
