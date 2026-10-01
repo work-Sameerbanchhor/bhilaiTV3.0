@@ -6,6 +6,7 @@
 [![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-Serverless-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
+> **Live Deployment:** [https://bhilaitv-23241707890.us-central1.run.app](https://bhilaitv-23241707890.us-central1.run.app)  
 > **Source Code & Documentation:** [https://github.com/work-Sameerbanchhor/bhilaiTV3.0](https://github.com/work-Sameerbanchhor/bhilaiTV3.0)
 
 ---
