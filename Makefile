@@ -3,7 +3,7 @@
 # ==============================================================================
 
 SERVICE_NAME ?= bhilaitv
-REGION ?= us-central1
+REGION ?= asia-south1
 PYTHON ?= /Users/sameerbanchhor/g_venv/venv/bin/python
 
 .PHONY: help deploy update logs status test stress dev setup
