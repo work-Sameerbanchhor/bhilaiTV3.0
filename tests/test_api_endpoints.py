@@ -31,6 +31,15 @@ async def test_search_endpoint():
         assert len(data["results"]) > 0
 
 @pytest.mark.asyncio
+async def test_poster_endpoint():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/poster?title=Fighter")
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("poster_url") is not None
+        assert "http" in data["poster_url"]
+
+@pytest.mark.asyncio
 async def test_resolve_hubcloud_endpoint():
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         url = "https://hubcloud.cx/drive/p8f228fystpt10e"

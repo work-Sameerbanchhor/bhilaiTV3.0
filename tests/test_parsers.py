@@ -63,9 +63,10 @@ def test_movie_post_html_parsing():
     hub_link = [l for l in detail.resolutions[0].links if l.provider == "HubCloud"][0]
     assert "hubcloud.cx/drive/" in hub_link.url
     
-    # Verify GDFlix domain normalization to new3.gdflix.io
+    # Verify GDFlix domain and file ID
     gd_link = [l for l in detail.resolutions[0].links if l.provider == "GDFlix"][0]
-    assert gd_link.url == "https://new3.gdflix.io/file/U8SZX8qRtle9olo"
+    assert "file/U8SZX8qRtle9olo" in gd_link.url
+    assert "gdflix" in gd_link.url
 
 def test_series_post_html_parsing():
     html_content = """
@@ -78,7 +79,7 @@ def test_series_post_html_parsing():
         <h5>-:Episodes: 2:-</h5>
         <div class="downloads-btns-div">
             <a href="https://hubcloud.cx/drive/9e4ruub4ea8ba4z" class="btn"> HUBCLOUD [DD] </a>
-            <a href="https://new3.gdflix.io/file/SVcY5D0O6zrUUZB" class="btn"> GDFlix </a>
+            <a href="https://new4.gdflix.io/file/SVcY5D0O6zrUUZB" class="btn"> GDFlix </a>
         </div>
     </div>
     """
@@ -97,9 +98,10 @@ def test_series_post_html_parsing():
     assert detail.episodes[1].episode_num == 2
     assert len(detail.episodes[0].links) == 2
     
-    # Check normalized GDFlix URL on episode 1
+    # Check GDFlix URL on episode 1
     gd_link = [l for l in detail.episodes[0].links if l.provider == "GDFlix"][0]
-    assert gd_link.url == "https://new3.gdflix.io/file/8fgJTUqlTWKJ874"
+    assert "file/8fgJTUqlTWKJ874" in gd_link.url
+    assert "gdflix" in gd_link.url
 
 def test_series_zip_pack_html_parsing():
     html_content = """
@@ -129,4 +131,40 @@ def test_series_zip_pack_html_parsing():
     assert len(detail.resolutions) == 2
     assert "720p" in detail.resolutions[0].quality
     assert detail.resolutions[0].size == "4.6GB"
+
+def test_new_link_patterns_and_domain_auto_discovery():
+    from app.services.domain_registry import domain_registry
+    
+    html_content = """
+    <div class="download-links-div">
+        <h4>1080p [2.1GB]</h4>
+        <div class="downloads-btns-div">
+            <a href="https://hubcloud.ist/drive/ydy1xcejef1j11c" class="btn"> HUBCLOUD [DD] </a>
+            <a href="https://new4.gdflix.io/file/GxqYhvIs1pGH6cE" class="btn"> GDFlix </a>
+        </div>
+    </div>
+    """
+    detail = parse_post_html(
+        post_id=404,
+        raw_title="Seek (2025) WEB-DL Dual Audio Hindi ORG + Japanese Full Movie",
+        date="2025-01-01",
+        slug="seek-2025",
+        post_url="https://abhilinks.site/archives/404",
+        html=html_content
+    )
+    
+    assert len(detail.resolutions) == 1
+    links = detail.resolutions[0].links
+    assert len(links) == 2
+    
+    hub = [l for l in links if l.provider == "HubCloud"][0]
+    assert "hubcloud.ist/drive/ydy1xcejef1j11c" in hub.url
+    
+    gdf = [l for l in links if l.provider == "GDFlix"][0]
+    assert "new4.gdflix.io/file/GxqYhvIs1pGH6cE" in gdf.url
+    
+    # Verify domain registry learned the active domains
+    assert "hubcloud.ist" in domain_registry._hubcloud_domains
+    assert "new4.gdflix.io" in domain_registry._gdflix_domains
+
 

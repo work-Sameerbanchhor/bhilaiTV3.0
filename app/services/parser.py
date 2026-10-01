@@ -1,6 +1,7 @@
 import re
 from typing import Dict, Any, List
 from app.models import ParsedTitleInfo, LockerLink, ResolutionGroup, EpisodeGroup, ReleaseDetail
+from app.services.domain_registry import domain_registry
 
 def parse_title(raw_title: str) -> ParsedTitleInfo:
     """
@@ -64,7 +65,7 @@ def parse_title(raw_title: str) -> ParsedTitleInfo:
     # 7. Clean Show / Movie Title
     # The actual show/movie name precedes the first metadata boundary
     clean = re.split(
-        r'\b(?:Season\s*\d+|S\d+|\((?:19\d\d|20\d\d)\)|Multi Audio|Dual Audio|Hindi|Complete|Amazon Prime|Netflix Original|Hotstar|JioCinema|Zee5|SonyLIV|WEB Series|Full Movie|WEB-DL|BluRay|HDRip|480p|720p|1080p)\b',
+        r'\b(?:Season\s*\d+|S\d+|\((?:19\d\d|20\d\d)\)|Multi Audio|Dual Audio|Hindi|Complete|Amazon Prime|Netflix Original|Netflix|Hotstar|JioCinema|Zee5|SonyLIV|Canal\+|UPlay|ULLU|ALTT|Kooku|PrimeShots|Chikoo|WEB Series|Full Movie|WEB-DL|BluRay|HDRip|HDTC|HDTS|CAMRip|HQ|V[1-9]\b|480p|720p|1080p|2160p|4K)\b',
         title_str,
         flags=re.IGNORECASE
     )[0]
@@ -119,7 +120,8 @@ def parse_post_html(post_id: int, raw_title: str, date: str, slug: str, post_url
             clean_text = re.sub(r'<[^>]+>', '', text).strip()
             href = href.strip()
             
-            if "hubcloud.cx" in href:
+            if domain_registry.is_hubcloud(href):
+                domain_registry.learn_url(href)
                 links.append(LockerLink(
                     provider="HubCloud",
                     url=href,
@@ -127,18 +129,16 @@ def parse_post_html(post_id: int, raw_title: str, date: str, slug: str, post_url
                     is_primary=True,
                     badge="PRIMARY [DD]"
                 ))
-            elif "gdflix.dev" in href or "gdflix.io" in href:
-                # Normalize domain to active working mirror https://new3.gdflix.io/
-                file_hash = href.strip('/').split('/')[-1]
-                normalized_url = f"https://new3.gdflix.io/file/{file_hash}"
+            elif domain_registry.is_gdflix(href):
+                domain_registry.learn_url(href)
                 links.append(LockerLink(
                     provider="GDFlix",
-                    url=normalized_url,
+                    url=href,
                     label="⚡ INSTANT DL (10GBPS)",
                     is_primary=False,
                     badge="10GBPS [GDFLIX]"
                 ))
-            elif "t.me" in href:
+            elif domain_registry.is_telegram(href):
                 links.append(LockerLink(
                     provider="Telegram",
                     url=href,

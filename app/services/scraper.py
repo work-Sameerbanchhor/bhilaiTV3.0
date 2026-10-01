@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from app.config import REST_API_URL, BASE_URL, DEFAULT_HEADERS, HTTP_TIMEOUT, MOVIESHUNT_BASE_URL
 from app.models import ReleaseItem, SearchResponse, ReleaseDetail, SeriesQualitySibling
 from app.services.parser import parse_title, parse_post_html
+from app.services.domain_registry import domain_registry
 
 # Maximum entries per in-memory cache to prevent unbounded growth in production
 MAX_CACHE_ENTRIES = 1000
@@ -47,7 +48,10 @@ async def get_http_client() -> httpx.AsyncClient:
 
 async def get_movie_poster(clean_title: str) -> Optional[str]:
     """
-    Asynchronously retrieves the official TMDB movie/series poster from MoviesHunt.
+    Asynchronously retrieves the official movie/series poster using a multi-tiered lookup:
+    1. IMDb Suggestion API (Amazon CloudFront CDN, sub-100ms, bandwidth-optimized 342px thumbnail)
+    2. TVMaze API (fallback for TV series & shows)
+    3. Configured MOVIESHUNT_BASE_URL (fallback mirror if reachable)
     Caches results in memory for instantaneous sub-millisecond retrieval.
     """
     if not clean_title:
@@ -59,22 +63,60 @@ async def get_movie_poster(clean_title: str) -> Optional[str]:
     
     _prune_cache_if_needed(_POSTER_CACHE)
     
+    client = await get_http_client()
+
+    # Tier 1: IMDb Suggestion API (Amazon CloudFront CDN, global fast resolution)
+    slug = re.sub(r'[^a-zA-Z0-9\s]', '', clean).lower().strip()
+    slug = re.sub(r'\s+', '_', slug)
+    if slug:
+        first_char = slug[0]
+        url = f"https://v3.sg.media-imdb.com/suggestion/{first_char}/{slug}.json"
+        try:
+            r = await client.get(url, timeout=2.5)
+            if r.status_code == 200:
+                data = r.json()
+                for it in data.get("d", []):
+                    if "i" in it and "imageUrl" in it["i"]:
+                        raw_img = it["i"]["imageUrl"]
+                        # Scale to compact ~40KB thumbnail (similar to TMDB /w342/)
+                        scaled_img = re.sub(r'\._V1_.*?\.(jpg|jpeg|png)', r'._V1_QL75_UX342_.\1', raw_img)
+                        if "._V1_." in scaled_img:
+                            scaled_img = scaled_img.replace("._V1_.", "._V1_QL75_UX342_.")
+                        _POSTER_CACHE[clean] = scaled_img
+                        return scaled_img
+        except Exception:
+            pass
+
+    # Tier 2: TVMaze API (specialized for TV series & dramas)
     try:
-        client = await get_http_client()
-        search_url = f"{MOVIESHUNT_BASE_URL}/?s={clean}"
-        r = await client.get(search_url, timeout=5.0)
+        url = f"https://api.tvmaze.com/singlesearch/shows?q={clean}"
+        r = await client.get(url, timeout=2.0)
         if r.status_code == 200:
-            art_match = re.search(r'<article[^>]*>.*?<img[^>]+src=[\"\x27]([^\"]+)[\"\x27]', r.text, re.DOTALL | re.I)
-            if art_match:
-                url = art_match.group(1).strip()
-                # Optimize TMDB image size: replace /original/ with /w342/ for compact fast loading
-                if "image.tmdb.org/t/p/" in url:
-                    url = re.sub(r'/t/p/(?:original|w\d+)/', '/t/p/w342/', url)
-                _POSTER_CACHE[clean] = url
-                return url
+            data = r.json()
+            img = data.get("image", {})
+            poster = img.get("medium") or img.get("original")
+            if poster:
+                _POSTER_CACHE[clean] = poster
+                return poster
     except Exception:
         pass
-        
+
+    # Tier 3: Upstream mirror fallback
+    if MOVIESHUNT_BASE_URL:
+        try:
+            search_url = f"{MOVIESHUNT_BASE_URL}/?s={clean}"
+            r = await client.get(search_url, timeout=1.5)
+            if r.status_code == 200:
+                art_match = re.search(r'<article[^>]*>.*?<img[^>]+src=[\"\x27]([^\"]+)[\"\x27]', r.text, re.DOTALL | re.I)
+                if art_match:
+                    url = art_match.group(1).strip()
+                    if "image.tmdb.org/t/p/" in url:
+                        url = re.sub(r'/t/p/(?:original|w\d+)/', '/t/p/w342/', url)
+                    _POSTER_CACHE[clean] = url
+                    return url
+        except Exception:
+            pass
+
     _POSTER_CACHE[clean] = None
     return None
 
@@ -295,6 +337,7 @@ async def resolve_hubcloud_direct_links(hubcloud_url: str) -> Dict[str, Any]:
     Server-side resolver that navigates through HubCloud and its intermediate handoff,
     extracting clean, ZERO-AD direct Cloudflare R2 presigned links, 10Gbps CDN streams,
     Pixeldrain mirrors, and Telegram streams.
+    Dynamically attempts active candidate domains and fails over if a mirror is dead.
     """
     now = time.time()
     if hubcloud_url in _RESOLVE_CACHE:
@@ -302,86 +345,119 @@ async def resolve_hubcloud_direct_links(hubcloud_url: str) -> Dict[str, Any]:
         if now - cached_time < RESOLVE_TTL:
             return cached_res
 
-    import re
-    headers = dict(DEFAULT_HEADERS)
-    headers["Referer"] = "https://hubcloud.cx/"
+    candidate_urls = domain_registry.get_hubcloud_candidate_urls(hubcloud_url)
+    last_err = None
 
-    async with httpx.AsyncClient(headers=headers, timeout=12.0, verify=False, follow_redirects=True) as client:
-        # 1. Fetch HubCloud page
-        r1 = await client.get(hubcloud_url)
-        html1 = r1.text
+    for candidate in candidate_urls:
+        parsed_host = re.sub(r"^https?://", "", candidate).split("/")[0] or "hubcloud.ist"
+        headers = dict(DEFAULT_HEADERS)
+        headers["Referer"] = f"https://{parsed_host}/"
 
-        token_m = re.search(r"var url = ['\"](https://gamerxyt\.com/hubcloud\.php\?[^'\"]+)['\"];", html1)
-        if not token_m:
-            raise ValueError("Token not found in HubCloud page or link invalid")
+        try:
+            async with httpx.AsyncClient(headers=headers, timeout=4.5, verify=False, follow_redirects=True) as client:
+                # 1. Fetch HubCloud page
+                r1 = await client.get(candidate)
+                if r1.status_code != 200:
+                    domain_registry.mark_domain_failed(parsed_host)
+                    continue
 
-        next_url = token_m.group(1)
+                html1 = r1.text
 
-        # 2. Fetch gamerxyt.com intermediate page
-        r2 = await client.get(next_url)
-        html2 = r2.text
+                token_m = re.search(r"(?:var url = |href=)[\'\"](https://[^\'\" ]*gamerxyt\.com/hubcloud\.php\?[^\'\"]+)[\'\"]", html1)
+                if not token_m:
+                    token_m = re.search(r"https://[^\'\" ]*gamerxyt\.com/hubcloud\.php\?[^\'\"<>\s]+", html1)
+                    if not token_m:
+                        domain_registry.mark_domain_failed(parsed_host)
+                        continue
+                    next_url = token_m.group(0)
+                else:
+                    next_url = token_m.group(1)
 
-        # 3. Extract direct links from anchors
-        anchors = re.findall(r'<a\s+[^>]*href=[\'"]([^\'"]+)[\'"][^>]*>(.*?)</a>', html2, re.DOTALL | re.IGNORECASE)
+                # 2. Fetch gamerxyt.com intermediate page
+                r2 = await client.get(next_url)
+                if r2.status_code != 200:
+                    continue
+                html2 = r2.text
 
-        direct_links = []
-        for href, text in anchors:
-            clean_t = re.sub(r'<[^>]+>', '', text).strip()
-            if "r2.cloudflarestorage.com" in href:
-                direct_links.append({
-                    "type": "r2_direct",
-                    "provider": "Cloudflare R2",
-                    "label": "Direct Fast Download (Cloudflare R2)",
-                    "badge": "⚡ ZERO_ADS [R2]",
-                    "url": href,
-                    "is_direct": True
-                })
-            elif "gpdl.hubcloud.cx" in href:
-                direct_links.append({
-                    "type": "gpdl_cdn",
-                    "provider": "10Gbps CDN",
-                    "label": "10Gbps High-Speed Stream",
-                    "badge": "⚡ CDN_10GBPS",
-                    "url": href,
-                    "is_direct": True
-                })
-            elif "pixeldrain.dev" in href or "pixeldrain.com" in href:
-                direct_links.append({
-                    "type": "pixeldrain",
-                    "provider": "PixelDrain",
-                    "label": "PixelDrain Fast Mirror",
-                    "badge": "📦 MIRROR",
-                    "url": href,
-                    "is_direct": False
-                })
-            elif "fuckingfast.net" in href:
-                direct_links.append({
-                    "type": "buzz_server",
-                    "provider": "Buzz Server",
-                    "label": "Buzz Fast Server",
-                    "badge": "⚡ FAST_MIRROR",
-                    "url": href,
-                    "is_direct": False
-                })
-            elif "hubcloud.cx/tg/go" in href:
-                direct_links.append({
-                    "type": "telegram",
-                    "provider": "Telegram",
-                    "label": "Telegram Direct Stream",
-                    "badge": "✈️ TELEGRAM",
-                    "url": href,
-                    "is_direct": True
-                })
+                # 3. Extract direct links from anchors
+                anchors = re.findall(r'<a\s+[^>]*href=[\'\"]([^\'\"]+)[\'\"][^>]*>(.*?)</a>', html2, re.DOTALL | re.IGNORECASE)
 
-        result = {
-            "source_url": hubcloud_url,
-            "direct_links": direct_links,
-            "total_links": len(direct_links)
-        }
+                direct_links = []
+                for href, text in anchors:
+                    clean_t = re.sub(r'<[^>]+>', '', text).strip()
+                    if "r2.cloudflarestorage.com" in href or "r2.dev" in href:
+                        direct_links.append({
+                            "type": "r2_direct",
+                            "provider": "Cloudflare R2",
+                            "label": "Direct Fast Download (Cloudflare R2)",
+                            "badge": "⚡ ZERO_ADS [R2]",
+                            "url": href,
+                            "is_direct": True
+                        })
+                    elif re.search(r"gpdl\.hubcloud\.[a-z]+", href) or "gpdl" in href:
+                        direct_links.append({
+                            "type": "gpdl_cdn",
+                            "provider": "10Gbps CDN",
+                            "label": "10Gbps High-Speed Stream",
+                            "badge": "⚡ CDN_10GBPS",
+                            "url": href,
+                            "is_direct": True
+                        })
+                    elif "pixeldrain.dev" in href or "pixeldrain.com" in href:
+                        direct_links.append({
+                            "type": "pixeldrain",
+                            "provider": "PixelDrain",
+                            "label": "PixelDrain Fast Mirror",
+                            "badge": "📦 MIRROR",
+                            "url": href,
+                            "is_direct": False
+                        })
+                    elif "fuckingfast.net" in href or "buzzheavier" in href:
+                        direct_links.append({
+                            "type": "buzz_server",
+                            "provider": "Buzz Server",
+                            "label": "Buzz Fast Server",
+                            "badge": "⚡ FAST_MIRROR",
+                            "url": href,
+                            "is_direct": False
+                        })
+                    elif "hbplay.pages.dev" in href:
+                        direct_links.append({
+                            "type": "web_stream",
+                            "provider": "Online Stream",
+                            "label": "Direct Online Video Stream",
+                            "badge": "🎬 PLAY_ONLINE",
+                            "url": href,
+                            "is_direct": True
+                        })
+                    elif re.search(r"hubcloud\.[a-z]+/tg/go", href) or "t.me" in href or "telegram" in href:
+                        direct_links.append({
+                            "type": "telegram",
+                            "provider": "Telegram",
+                            "label": "Telegram Direct Stream",
+                            "badge": "✈️ TELEGRAM",
+                            "url": href,
+                            "is_direct": True
+                        })
 
-        _prune_cache_if_needed(_RESOLVE_CACHE)
-        _RESOLVE_CACHE[hubcloud_url] = (now, result)
-        return result
+                if direct_links:
+                    domain_registry.mark_hubcloud_success(parsed_host)
+                    result = {
+                        "source_url": hubcloud_url,
+                        "direct_links": direct_links,
+                        "total_links": len(direct_links),
+                        "resolved_domain": parsed_host
+                    }
+                    _prune_cache_if_needed(_RESOLVE_CACHE)
+                    _RESOLVE_CACHE[hubcloud_url] = (now, result)
+                    return result
+
+        except Exception as e:
+            last_err = e
+            domain_registry.mark_domain_failed(parsed_host)
+            continue
+
+    raise ValueError(f"Failed to resolve direct download stream across candidate HubCloud mirrors: {last_err}")
 
 async def close_http_client():
     """Gracefully closes persistent HTTP clients on application shutdown."""
