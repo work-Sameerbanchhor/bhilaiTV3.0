@@ -6,7 +6,7 @@ set -e
 # ==============================================================================
 
 SERVICE_NAME="bhilaitv"
-REGION="${GCLOUD_REGION:-asia-south1}"
+REGION="${GCLOUD_REGION:-us-central1}"
 
 # Optional 1-time setup flag: ./deploy-cloudrun.sh --setup
 if [ "$1" == "--setup" ]; then
