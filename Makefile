@@ -1,6 +1,5 @@
 # ==============================================================================
 # BHILAI_TV // Developer & Deployment Automation Makefile
-# Live URL: https://bhilaitv-23241707890.us-central1.run.app
 # ==============================================================================
 
 SERVICE_NAME ?= bhilaitv

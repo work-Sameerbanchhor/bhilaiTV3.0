@@ -1,8 +1,5 @@
 # Google Cloud Run Deployment Guide // BhilaiTV
 
-- **Live Production URL**: `https://bhilaitv-23241707890.us-central1.run.app`
-- **Anycast Default URL**: `https://bhilaitv-7ksu2o5y6q-uc.a.run.app`
-
 ---
 
 ## 1. Fast 1-Command Redeployment (Zero Extra Steps)

@@ -3,7 +3,6 @@ set -e
 
 # ==============================================================================
 # BHILAI_TV // Ultra-Fast Cloud Run Redeployment Script
-# Live URL: https://bhilaitv-23241707890.us-central1.run.app
 # ==============================================================================
 
 SERVICE_NAME="bhilaitv"
@@ -40,6 +39,10 @@ gcloud run deploy "$SERVICE_NAME" \
 
 echo ""
 echo "=========================================================="
-echo "  [OK] LIVE CLOUD RUN URL:"
-echo "  https://bhilaitv-23241707890.us-central1.run.app"
+LIVE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format='value(status.url)' 2>/dev/null || true)
+if [ -n "$LIVE_URL" ]; then
+    echo "  [OK] LIVE CLOUD RUN URL: $LIVE_URL"
+else
+    echo "  [OK] DEPLOYMENT COMPLETED SUCCESSFULLY"
+fi
 echo "=========================================================="
