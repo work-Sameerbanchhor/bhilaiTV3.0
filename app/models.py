@@ -62,3 +62,24 @@ class SearchResponse(BaseModel):
     total_pages: int
     current_page: int
     query: Optional[str] = None
+
+class CatalogSnapshot(BaseModel):
+    generated_at: float
+    iso_date: str
+    total_count: int
+    total_pages: int
+    pages_cached: int
+    items_per_page: int
+    releases: List[ReleaseItem]
+
+class SnapshotStatus(BaseModel):
+    ready: bool
+    total_items: int = 0
+    pages_cached: int = 0
+    total_upstream_items: int = 0
+    total_upstream_pages: int = 0
+    generated_at: Optional[float] = None
+    iso_date: Optional[str] = None
+    age_seconds: Optional[float] = None
+    storage_backend: str = "none"
+    is_syncing: bool = False

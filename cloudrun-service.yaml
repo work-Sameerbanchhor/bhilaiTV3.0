@@ -35,3 +35,5 @@ spec:
           value: "https://movieshunt.casa"
         - name: HTTP_TIMEOUT
           value: "12.0"
+        - name: GCS_BUCKET_NAME
+          value: "bhilaitv-datasets-sameer-voter-analytics-v1"

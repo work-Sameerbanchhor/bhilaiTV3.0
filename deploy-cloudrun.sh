@@ -34,7 +34,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --min-instances 0 \
     --max-instances 10 \
     --concurrency 80 \
-    --set-env-vars "ABHI_BASE_URL=https://abhilinks.site,MOVIESHUNT_BASE_URL=https://movieshunt.casa,HTTP_TIMEOUT=12.0" \
+    --set-env-vars "ABHI_BASE_URL=https://abhilinks.site,MOVIESHUNT_BASE_URL=https://movieshunt.casa,HTTP_TIMEOUT=12.0,GCS_BUCKET_NAME=bhilaitv-datasets-sameer-voter-analytics-v1" \
     --quiet
 
 echo ""

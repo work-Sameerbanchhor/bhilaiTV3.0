@@ -4,10 +4,20 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+from typing import Optional
 import logging
 
-from app.models import SearchResponse, ReleaseDetail
+from app.models import SearchResponse, ReleaseDetail, SnapshotStatus
 from app.services.scraper import fetch_latest_releases, search_releases, fetch_release_detail, resolve_hubcloud_direct_links, get_movie_poster
+from app.services.snapshot import (
+    init_snapshot,
+    stop_snapshot_worker,
+    get_snapshot_slice,
+    get_snapshot_status,
+    sync_snapshot,
+    is_snapshot_ready,
+)
+from app.config import SNAPSHOT_SYNC_KEY
 
 from contextlib import asynccontextmanager
 
@@ -16,7 +26,10 @@ logger = logging.getLogger("bhilaitv")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize snapshot engine (hydrates from GCS/local cache, starts background refresh)
+    await init_snapshot()
     yield
+    await stop_snapshot_worker()
     from app.services.scraper import close_http_client
     await close_http_client()
 
@@ -48,11 +61,44 @@ async def serve_index():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ONLINE", "service": "BhilaiTV Backend", "version": "1.0.0"}
+    return {
+        "status": "ONLINE",
+        "service": "BhilaiTV Backend",
+        "version": "1.0.0",
+        "snapshot_ready": is_snapshot_ready()
+    }
+
+@app.get("/api/snapshot/status", response_model=SnapshotStatus)
+async def snapshot_status():
+    """Returns real-time status of the 20-page catalog snapshot in memory & GCS."""
+    return get_snapshot_status()
+
+@app.api_route("/api/snapshot/sync", methods=["GET", "POST"])
+async def trigger_snapshot_sync(key: Optional[str] = Query(None)):
+    """
+    Manually triggers or schedules a full rebuild of the 20-page catalog snapshot.
+    Protected by SNAPSHOT_SYNC_KEY if configured.
+    """
+    if SNAPSHOT_SYNC_KEY and key != SNAPSHOT_SYNC_KEY:
+        raise HTTPException(status_code=403, detail="Invalid snapshot sync authorization key")
+    
+    # Run sync
+    snapshot = await sync_snapshot(force=True)
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully synchronized {len(snapshot.releases)} releases across {snapshot.pages_cached} pages",
+        "snapshot": get_snapshot_status()
+    }
 
 @app.get("/api/latest", response_model=SearchResponse)
 async def get_latest(page: int = Query(1, ge=1), per_page: int = Query(20, ge=1, le=50)):
     try:
+        # Tier 1: In-memory snapshot cache for pages 1-20 (sub-millisecond latency, zero upstream load)
+        snapshot_slice = get_snapshot_slice(page=page, per_page=per_page)
+        if snapshot_slice is not None:
+            return snapshot_slice
+
+        # Tier 2: Real-time scraping fallback (for deep pagination >20 or cold cache)
         return await fetch_latest_releases(page=page, per_page=per_page)
     except Exception as e:
         logger.error(f"Error fetching latest releases: {e}")
